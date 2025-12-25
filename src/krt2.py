@@ -14,9 +14,15 @@ import time
 serialData = serial.Serial('/dev/ttyAMA0',9600, timeout=0.1) 
 
 last_response = 0
+ComEstablished = False
+TimeComEstablished = 0
 Step25khz = False
-ActiveFrequency = ["",""]
-StandbyFrequency = ["",""]
+volume_x = 0
+volume_hex = ''
+squelch_hex = ''
+intercom_hex = ''
+ActiveFrequency = ['','']
+StandbyFrequency = ['','']
 
 array = [''] * 30
 array_pointer = 0
@@ -27,15 +33,29 @@ while True:
     data = serialData.read(1)
     #print(f"Raw response ({len(data)} bytes): {data.hex()}")
 
+    # Respond to 'S' command from radio
     if data == b'S':
         serialData.write(b'x')
         print("Sent 'x' in response to 'S'")
         time.sleep(0.1)
-        last_response = time.time() #/1000
+        ComEstablished = True
+        TimeComEstablished = time.time() 
+        last_response = time.time() 
 
+    # Radio replies with SOH at start of message
     elif data.hex() == '01' and array_pointer == 0:
+
         print(f"Radio replied with SOH at start of message")
 
+    # Radio replies with SOH at start of message
+    elif data.hex() == '06' and array_pointer == 0:
+        print(f"Radio replied OK")
+
+    # Radio replies with SOH at start of message
+    elif data.hex() == '15' and array_pointer == 0:
+        print(f"Radio replied Not OK")
+
+    # Something else received, store in array
     elif data.hex() != '':
         array[array_pointer] = data.hex()
         print(f"Array contents: {array}")
@@ -43,11 +63,26 @@ while True:
         if array_pointer >= len(array):
             array_pointer = 0
 
+    if TimeComEstablished + 5 < now and TimeComEstablished > 0:
+
+        #volume = 12
+        #squelch = 4
+        #intercom = 6
+        #volume = volume - 1
+        checksum = squelch + intercom
+        serialData.write(bytes([0x02, 0x41, volume, squelch, intercom, checksum]))  # Send volume command
+
+        TimeComEstablished = time.time() 
+
+
+
     if now - last_response > 1 and last_response != 0:
         serialData.write(b'S')
         print("Sent 'S' to radio")
         last_response = now
 
+
+    # Active Frequency Message
     if array[0] == '02' and array[1] == '55' and array[12] != '':
         print("Channel active frequency received:")
         print(f"Array contents: {array}")
@@ -73,10 +108,11 @@ while True:
         array = [''] * 30
         array_pointer = 0
         
+    # Standby Frequency Message
     elif array[0] == '02' and array[1] == '52'  and array[12] != '':
         print("Channel standby frequency received:")
 
-        # Parse 0x02 0x55 message (frequency and name)
+        # Parse 0x02 0x52 message (frequency and name)
         try:
             mhz = str(int(array[2], 16))
             khz = str(round((int(array[3], 16) * 0.005), 3))
@@ -101,16 +137,21 @@ while True:
         array = [''] * 30
         array_pointer = 0
 
+    # Volume Message
     elif array[0] == '02' and array[1] == '41' and array[5] != '':
         print("Volume received:")
         #print(f"Array contents: {array}")
+        volume_hex = array[2]
         volume = int(array[2], 16)
+        squelch_hex = array[3]
         squelch = int(array[3], 16)
+        intercom_hex = array[4]
         intercom = int(array[4], 16)
         print(f"Volume Level: {volume} Squelch Level: {squelch} Intercom Level: {intercom}")
         array = [''] * 30
         array_pointer = 0
 
+    # Active and Standby Switch Message
     elif array[0] == '02' and array[1] == '43'  and array[2] != '':
         print("Active and standby switched:")
 
@@ -130,30 +171,35 @@ while True:
         array = [''] * 30
         array_pointer = 0
 
+    # PTT Settings Message
     elif array[0] == '02' and array[1] == '32'  and array[2] != '':
         print("PTT settings received:")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # Intercom Volume Message
     elif array[0] == '02' and array[1] == '33'  and array[2] != '':
         print("Intercom volume received:")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # External Volume Message
     elif array[0] == '02' and array[1] == '34'  and array[2] != '':
         print("External volume received:")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # Side Tone Settings Message
     elif array[0] == '02' and array[1] == '31'  and array[2] != '':
         print("Side tone settings received:")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # 8.33 kHz Step Message
     elif array[0] == '02' and array[1] == '38':
         print("8.33 kHz step detected")
         Step25khz = False
@@ -161,6 +207,7 @@ while True:
         array = [''] * 30
         array_pointer = 0
 
+    # 25 kHz Step Message
     elif array[0] == '02' and array[1] == '36':
         print("25 kHz step detected")
         Step25khz = True
@@ -168,36 +215,42 @@ while True:
         array = [''] * 30
         array_pointer = 0
 
+    # Mic Gain Pilot Settings Message
     elif array[0] == '02' and array[1] == '49'  and array[2] != '':
         print("Mic gain pilot settings received:")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # Mic Gain Copilot Settings Message
     elif array[0] == '02' and array[1] == '4A'  and array[2] != '':
         print("Mic gain copilot settings received:")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # Call Next User-Defined Memory Channel to Standby Field Message
     elif array[0] == '02' and array[1] == '57':
         print("Call Next User-Defined Memory Channel to Standby Field received")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # Call Previous User-Defined Memory Channel to Standby Field Message
     elif array[0] == '02' and array[1] == '77':
         print("Call Previous User-Defined Memory Channel to Standby Field received")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # Activate DUAL Mode Message
     elif array[0] == '02' and array[1] == '4F':
         print("Activate DUAL Mode received")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
+    # Deactivate DUAL Mode Message
     elif array[0] == '02' and array[1] == '6F':
         print("Deactivate DUAL Mode received")
         #print(f"Array contents: {array}")
