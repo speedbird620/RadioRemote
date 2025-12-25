@@ -6,6 +6,7 @@ Listens on /dev/ttyAMA0 @ 9600 baud for "S" command
 Uses binary protocol from KTR2 manual
 """
 
+import select
 import serial
 import sys
 import signal
@@ -18,12 +19,11 @@ ComEstablished = False
 TimeComEstablished = 0
 Step25khz = False
 volume = 0
-volume_x = 0
-volume_hex = ''
+volume_sp = 0
 squelch = 0
-squelch_hex = ''
+squelch_sp = 0
 intercom = 0
-intercom_hex = ''
+intercom_sp = 0
 ActiveFrequency = ['','']
 StandbyFrequency = ['','']
 x = False
@@ -95,9 +95,15 @@ while True:
     elif data.hex() == '06' and array_pointer == 0:
         print(f"Radio replied OK")
 
+        if volume_sp != volume:
+            volume = volume_sp
+
     # Radio replies with SOH at start of message
     elif data.hex() == '15' and array_pointer == 0:
         print(f"Radio replied Not OK")
+
+        if volume_sp != volume:
+            volume_sp = volume
 
     # Something else received, store in array
     elif data.hex() != '':
@@ -107,7 +113,30 @@ while True:
         if array_pointer >= len(array):
             array_pointer = 0
 
-    if TimeComEstablished + 5 < now and TimeComEstablished > 0 and not x and ComEstablished:
+    if select.select([sys.stdin], [], [], 0)[0]:
+        char = sys.stdin.readline().strip()
+
+        if char == 'q':
+            print("Exiting...")
+            serialData.close()
+            sys.exit(0)
+
+        if char == '+':
+            print("Up arrow pressed")
+            volume_sp += 1
+            checksum = squelch + intercom
+            serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
+
+        if char == '-':
+            print("Down arrow pressed")
+            volume_sp -= 1
+            checksum = squelch + intercom
+            serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
+
+
+
+
+    """if TimeComEstablished + 5 < now and TimeComEstablished > 0 and not x and ComEstablished:
 
         #volume = 12
         #squelch = 4
@@ -120,9 +149,9 @@ while True:
         # 123.375: '02', '55', '7b', '4b', '20', '20', '20', '20', '20', '20', '20', '20', '30',
         # 123.000: '02', '52', '7b', '00', '20', '20', '20', '20', '20', '20', '20', '20', '7b',
 
-        x = True
+        x = True"""
 
-    if TimeComEstablished + 1 < now and TimeComEstablished > 0 and ComEstablished:
+    """if TimeComEstablished + 1 < now and TimeComEstablished > 0 and ComEstablished:
 
         y = y + 1
         mHz_x = 123
@@ -142,7 +171,7 @@ while True:
     if now - last_response > 1 and last_response != 0:
         serialData.write(b'S')
         print("Sent 'S' to radio")
-        last_response = now
+        last_response = now"""
 
 
     # Active Frequency Message
@@ -207,10 +236,16 @@ while True:
         #print(f"Array contents: {array}")
         volume_hex = array[2]
         volume = int(array[2], 16)
+        volume_sp = volume
+        
         squelch_hex = array[3]
         squelch = int(array[3], 16)
+        squelch_sp = squelch
+
         intercom_hex = array[4]
         intercom = int(array[4], 16)
+        intercom_sp = intercom
+
         print(f"Volume Level: {volume} Squelch Level: {squelch} Intercom Level: {intercom}")
         array = [''] * 30
         array_pointer = 0
