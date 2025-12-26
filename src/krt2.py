@@ -14,8 +14,13 @@ import time
 
 serialData = serial.Serial('/dev/ttyAMA0',9600, timeout=0.1) 
 
-last_response = 0
+question_radio2pi = 0
+
+reply_pi2radio = 0
+question_pi2radio = 0
+
 ComEstablished = False
+ComEstablished_old = False
 DuplexComEstablished = False
 TimeComEstablished = 0
 Step25khz = False
@@ -25,40 +30,24 @@ volume_sp = 0
 squelch = 0
 squelch_sp = 0
 intercom = 0
-mhz = 0
-mhz_sp = 0
+mhz = 118
+stby_mhz = 118
+mhz_sp = 118
 khz = 0.0
+channel = 0
+stby_channel = 0
 channel_sp = 0
 tmp_pointer = 0
 intercom_sp = 0
 ActiveFrequency = ['','']
 StandbyFrequency = ['','']
+switch_active_standby = False
+
 x = False
 y = 0
 
 array = [''] * 30
 array_pointer = 0
-
-def shift_array(processed_until):
-    """
-    Shift array elements after processed_until position to the beginning.
-    Args: processed_until - the last position that has been processed (0-based index)
-    Example: if positions 0-12 are processed, call shift_array(12)
-    This will move positions 13-29 to positions 0-16
-    """
-    global array, array_pointer
-    shift_amount = processed_until + 1
-    array_len = len(array)
-    for i in range(array_len - shift_amount):
-        array[i] = array[i + shift_amount]
-    # Clear the remaining positions
-    for i in range(array_len - shift_amount, array_len):
-        array[i] = ''
-    # Set array_pointer to the first empty position
-    array_pointer = array_len - shift_amount
-    print(f"Array shifted by {shift_amount}: {array}")
-
-
 
 #   .n00   .n05   .n10   .n15   .n25   .n30   .n35   .n40   .n50   .n55   .n60  .n65    .n75   .n80   .n85   .n90             
 HexArray = [
@@ -75,30 +64,64 @@ HexArray = [
 
 
 DecArray = [
-    0.000, 0.005, 0.010, 0.015, 0.025, 0.030, 0.035, 0.040, 0.050, 0.055, 0.060, 0.065, 0.075, 0.080, 0.085, 0.090, 
-    0.100, 0.105, 0.110, 0.115, 0.125, 0.130, 0.135, 0.140, 0.150, 0.155, 0.160, 0.165, 0.175, 0.180, 0.185, 0.190, 
-    0.200, 0.205, 0.210, 0.215, 0.225, 0.230, 0.235, 0.240, 0.250, 0.255, 0.260, 0.265, 0.275, 0.280, 0.285, 0.290, 
-    0.300, 0.305, 0.310, 0.315, 0.325, 0.330, 0.335, 0.340, 0.350, 0.355, 0.360, 0.365, 0.375, 0.380, 0.385, 0.390, 
-    0.400, 0.405, 0.410, 0.415, 0.425, 0.430, 0.435, 0.440, 0.450, 0.455, 0.460, 0.465, 0.475, 0.480, 0.485, 0.490,
-    0.500, 0.505, 0.510, 0.515, 0.525, 0.530, 0.535, 0.540, 0.550, 0.555, 0.560, 0.565, 0.575, 0.580, 0.585, 0.590, 
-    0.600, 0.605, 0.610, 0.615, 0.625, 0.630, 0.635, 0.640, 0.650, 0.655, 0.660, 0.665, 0.675, 0.680, 0.685, 0.690, 
-    0.700, 0.705, 0.710, 0.715, 0.725, 0.730, 0.735, 0.740, 0.750, 0.755, 0.760, 0.765, 0.775, 0.780, 0.785, 0.790, 
-    0.800, 0.805, 0.810, 0.815, 0.825, 0.830, 0.835, 0.840, 0.850, 0.855, 0.860, 0.865, 0.875, 0.880, 0.885, 0.890, 
-    0.900, 0.905, 0.910, 0.915, 0.925, 0.930, 0.935, 0.940, 0.950, 0.955, 0.960, 0.965, 0.975, 0.980, 0.985, 0.990]
+    "0.000", "0.005", "0.010", "0.015", "0.025", "0.030", "0.035", "0.040", "0.050", "0.055", "0.060", "0.065", "0.075", "0.080", "0.085", "0.090", 
+    "0.100", "0.105", "0.110", "0.115", "0.125", "0.130", "0.135", "0.140", "0.150", "0.155", "0.160", "0.165", "0.175", "0.180", "0.185", "0.190", 
+    "0.200", "0.205", "0.210", "0.215", "0.225", "0.230", "0.235", "0.240", "0.250", "0.255", "0.260", "0.265", "0.275", "0.280", "0.285", "0.290", 
+    "0.300", "0.305", "0.310", "0.315", "0.325", "0.330", "0.335", "0.340", "0.350", "0.355", "0.360", "0.365", "0.375", "0.380", "0.385", "0.390", 
+    "0.400", "0.405", "0.410", "0.415", "0.425", "0.430", "0.435", "0.440", "0.450", "0.455", "0.460", "0.465", "0.475", "0.480", "0.485", "0.490",
+    "0.500", "0.505", "0.510", "0.515", "0.525", "0.530", "0.535", "0.540", "0.550", "0.555", "0.560", "0.565", "0.575", "0.580", "0.585", "0.590", 
+    "0.600", "0.605", "0.610", "0.615", "0.625", "0.630", "0.635", "0.640", "0.650", "0.655", "0.660", "0.665", "0.675", "0.680", "0.685", "0.690", 
+    "0.700", "0.705", "0.710", "0.715", "0.725", "0.730", "0.735", "0.740", "0.750", "0.755", "0.760", "0.765", "0.775", "0.780", "0.785", "0.790", 
+    "0.800", "0.805", "0.810", "0.815", "0.825", "0.830", "0.835", "0.840", "0.850", "0.855", "0.860", "0.865", "0.875", "0.880", "0.885", "0.890", 
+    "0.900", "0.905", "0.910", "0.915", "0.925", "0.930", "0.935", "0.940", "0.950", "0.955", "0.960", "0.965", "0.975", "0.980", "0.985", "0.990"]
+
+MsgArray = ['42',"Low battery",
+            '44',"Cancel low battery",
+            '4A',"RX",
+            '56',"Cancel RX",
+            '4B',"TX",
+            '59',"Cancel RX, TX or DUAL-RX",
+            '4C',"TX timeout",
+            '4F',"DUAL mode on",
+            '6F',"DUAL mode off",
+            '4D',"DUAL-RX active",
+            '6D',"DUAL-RX stby",
+            '61',"ADC error",
+            '62',"Antenna impedance mismatch – high VSWR",
+            '63',"FPAA error, startup blocked",
+            '64',"Frequency synthesizer error",
+            '65',"PLL error",
+            '66',"Key inputs blocked",
+            '67',"I2C bus error",
+            '68',"Antenna switch error or damaged D10 diode",
+            '46',"Clear all errors",
+            '38',"8.33 kHz step",
+            '36',"25 kHz step",
+            ]
+
 
 while True:
     now = time.time() #/1000
     
     data = serialData.read(1)   # Reading one byte from serial port
+    #if data != b'': 
+    #    print(f"Raw response: {data.hex()}")
 
     # The radio is sending 'S' to check if we are there    
     if data == b'S':    
         serialData.write(b'x')      # We are indeed, responding with an 'x'
-        print("Sent 'x' in response to 'S'")
+        #print("Sent 'x' in response to 'S': " + str(now)) 
 
         ComEstablished = True               # Set the flag
         TimeComEstablished = time.time()    # Noteing the time communication was established
-        last_response = time.time()         # Noteing the time of last response
+        question_radio2pi = time.time()     # Noteing the time of last question
+
+        # Resetting the timeout timers for com check
+        if ComEstablished and not ComEstablished_old:
+            print("ComEstablished changed to True: " + str(now))
+            question_pi2radio = now      
+            reply_pi2radio = now
+
 
         array = [''] * 30                   # Resetting array
         array_pointer = 0                   # Resetting array pointer   
@@ -111,11 +134,25 @@ while True:
         if volume_sp != volume:
             volume = volume_sp
 
-        if mhz_sp != mhz:
-            mhz = mhz_sp
+        if mhz_sp != stby_mhz:
+            stby_mhz = mhz_sp
+            StandbyFrequency[0] = stby_mhz
 
-        if channel_sp != khz:
-            khz = channel_sp
+        if channel_sp != stby_channel:
+            stby_channel = channel_sp
+            StandbyFrequency[1] = stby_channel
+
+        if switch_active_standby:
+            temp_mhz = ActiveFrequency[0]
+            temp_khz = ActiveFrequency[1]
+            ActiveFrequency[0] = StandbyFrequency[0]
+            ActiveFrequency[1] = StandbyFrequency[1]
+            StandbyFrequency[0] = temp_mhz
+            StandbyFrequency[1] = temp_khz
+            switch_active_standby = False
+            print("Switched active and standby frequencies")
+            print("Active frequency: " + str(ActiveFrequency[0]) + str(ActiveFrequency[1]))
+            print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
 
     # Radio replies with NAK in response from an earlier message from us
     elif data.hex() == '15' and array_pointer == 0:
@@ -125,40 +162,55 @@ while True:
         if volume_sp != volume:
             volume_sp = volume
 
-        if mhz_sp != mhz:
-            mhz_sp = mhz
+        if mhz_sp != stby_mhz:
+            mhz_sp = stby_mhz
 
         if channel_sp != khz:
             channel_sp = khz  
 
-    # Something else received, store in array
-    elif data.hex() != '':
-        array[array_pointer] = data.hex()       # Write to buffer array
-        print(f"Array contents: {array}")       # Print the content of the array
-        array_pointer += 1                      # Nothing up the array pointer
-
-        # *doh* ... something messed up, the array pointer is out of bounds
-        if array_pointer >= len(array):
-            print("Array pointer out of bounds, resetting array and pointer")
-            array = [''] * 30                   # Resetting array
-            array_pointer = 0                   # Resetting array pointer   
-
+        if switch_active_standby:
+            switch_active_standby = False
 
     # Radio replies with SOH since we earelier sent 'S' to chack duplex communication
     elif data.hex() == '01' and array_pointer == 0:
         DuplexComEstablished = True             # Nice, we have duplex communication
-        print(f"Radio replied with SOH at start of message")
+        #print(f"Radio replied with SOH at start of message: " + str(now)) 
+        reply_pi2radio = now
+
+    # Something else received, store in array
+    elif data.hex() != '':
+        array[array_pointer] = data.hex()       # Write to buffer array
+        #print(f"Array contents: {array}")       # Print the content of the array
+        array_pointer += 1                      # Nothing up the array pointer
+
+        # *doh* ... something messed up, the array pointer is out of bounds
+        if array_pointer >= len(array):
+            print("Array pointer out " + str(array_pointer) + "of bounds, resetting array and pointer")
+            print(f"Active array: {array}")
+            array = [''] * 30                   # Resetting array
+            array_pointer = 0                   # Resetting array pointer   
 
     # Sending a 'S' to the radio to check if communication is duplex 
-    if now - last_response > 1 and last_response != 0 and ComEstablished:
+    if now - question_pi2radio > 4 and ComEstablished:
         serialData.write(b'S')                  # Sending an 'S' to radio           
-        print("Sent 'S' to radio")
-        last_response = now                     # Noteing the time of last response 
+        #print("Sent 'S' to radio: " + str(now)) 
+        question_pi2radio = now                 # Noteing the time of last question
 
-    # Something is wrong, there shall always be '02' at the start of the array. Reseting.
-    if array[0] != '02':
+    # It has been a while since last 'S'-question
+    if now - question_radio2pi > 32 and ComEstablished:
+        #print("Radio not sending 'S'-question, communication timed out: " + str(now)) 
+        ComEstablished = False                  # Communication lost
+
+    # It has been a while since last reply from radio
+    if now - reply_pi2radio > 6 and ComEstablished:
+        #print("No reply from radio, communication timed out: " + str(now)) 
+        ComEstablished = False                  # Communication lost
+
+    # Something is wrong, Throw the array to the floor.
+    if array[0] != '01' and array[0] != '02' and array[0] != '06' and array[0] != '15' and array[0] != '':
         array = [''] * 30                       # Resetting array
         array_pointer = 0                       # Resetting array pointer   
+
 
     # Test code for an Raspberry PI 5 in Visual Studio Code
     # A character is sent to the Rpi5 via keyboard. Note character needs Enter to be sent
@@ -176,22 +228,30 @@ while True:
             print("Up arrow pressed")
             volume_sp += 1                      # Increase volume setpoint
             checksum = squelch + intercom       # Calculate checksum
-
             serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
             char = ''                           # Clear char variable
+            time.sleep(0.15)                     # Short delay to allow processing
 
         # User wants to increase volume
         if char == '-':
             print("Down arrow pressed")
             volume_sp -= 1                      # Decrease volume setpoint
             checksum = squelch + intercom       # Calculate checksum
-
             serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
             char = ''                           # Clear char variable
+            time.sleep(0.15)                     # Short delay to allow processing
+
+        # User wants to switch active and standby frequencies
+        if char == '5':
+            print("Switch is pressed")
+            serialData.write(bytes([0x02, 0x43]))  # Send volume command
+            switch_active_standby = True
+            char = ''                           # Clear char variable
+            time.sleep(0.15)                     # Short delay to allow processing
 
         # User wants to enter frequency menu
         if char == '4' and menu == 10:
-            mhz_sp = mhz                        # Set MHz setpoint to current MHz
+            mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
             print("MHz SP = " + str(mhz_sp))    # Showing current MHz setpoint
             char = ''                           # Clear char variable
             menu = 20                           # Entering the menu
@@ -217,37 +277,123 @@ while True:
             print("MHz SP = " + str(mhz_sp))    # Showing current MHz setpoint
             char = ''                           # Clear char variable
 
-        # User wants to enter kHz menu
+        # User wants to enter nXX kHz menu
         elif char == '4' and menu == 20:
-            tmp_pointer = channel               # Set kHz setpoint to current kHz
+            tmp_pointer = stby_channel               # Set kHz setpoint to current kHz
             print("Meny: " + str(menu))         # Showing current menu
-            print("kHz SP = " + str(HexArray[tmp_pointer]))    # Showing current kHz setpoint
+            print("kHz SP = " + str(DecArray[tmp_pointer])[:3] + 'xx')    # Showing current kHz setpoint
             menu = 30
             char = ''                           # Clear char variable
 
         # User wants to increase kHz setpoint
         elif char == '8' and menu == 30:
             print("Meny: " + str(menu))         # Showing current menu
-            tmp_pointer += 1                    # Notching up setpoint
-            print("kHz SP = " + str(HexArray[tmp_pointer]))    # Showing current kHz setpoint
+            tmp_pointer += 16                   # Notching up setpoint
+            if tmp_pointer >= len(DecArray):    # End of array
+                tmp_pointer = len(DecArray) - tmp_pointer      # Continuing from start
+            print("kHz SP = " + str(DecArray[tmp_pointer])[:3] + 'xx')    # Showing current kHz setpoint
             char = ''                           # Clear char variable
         
         # User wants to decrease kHz setpoint
         elif char == '2' and menu == 30:
             print("Meny: " + str(menu))         # Showing current menu
+            tmp_pointer -= 16                    # Notching down setpoint
+            if tmp_pointer < 0:                 # End of array
+                tmp_pointer = len(DecArray) + tmp_pointer - 1  # Continuing from start
+            print("kHz SP = " + str(DecArray[tmp_pointer])[:3] + 'xx')    # Showing current kHz setpoint
+            char = ''                           # Clear char variable
+
+        # User wants to enter Xnn kHz menu
+        elif char == '4' and menu == 30:
+            menu = 40
+            print("Meny: " + str(menu))         # Showing current menu
+            print("kHz SP = " + str(DecArray[tmp_pointer]))    # Showing current kHz setpoint
+            char = ''                           # Clear char variable
+
+        # User wants to increase kHz setpoint
+        elif char == '8' and menu == 40:
+            print("Meny: " + str(menu))         # Showing current menu
+            tmp_pointer += 1                    # Notching up setpoint
+            if tmp_pointer >= len(DecArray):    # End of array
+                tmp_pointer = 0                 # Continuing from start
+            print("kHz SP = " + str(DecArray[tmp_pointer]))    # Showing current kHz setpoint
+            char = ''                           # Clear char variable
+        
+        # User wants to decrease kHz setpoint
+        elif char == '2' and menu == 40:
+            print("Meny: " + str(menu))         # Showing current menu
             tmp_pointer -= 1                    # Notching down setpoint
-            print("kHz SP = " + str(HexArray[channel_sp]))    # Showing current kHz setpoint
+            if tmp_pointer < 0:                 # End of array
+                tmp_pointer = len(DecArray)-1   # Continuing from end
+            print("kHz SP = " + str(DecArray[tmp_pointer]))    # Showing current kHz setpoint
             char = ''                           # Clear char variable
 
         # User wants to set frequency
-        elif char == '4' and menu == 30:
+        elif char == '4' and menu == 40:
             print("Meny: " + str(menu))             # Showing current menu
             channel_sp = (HexArray[tmp_pointer])    # Setting channel setpoint
-            checksum = int(mhz_sp) ^ channel_sp     # Calculate checksum
-            print("Sending to radio: " + str(mhz_sp) + " ." + str(DecArray[channel_sp]))  # Showing frequency being sent
+            checksum = int(mhz_sp) ^ channel_sp     # Calculate checksum4
+            print("Sending to radio: " + str(mhz_sp) + str(DecArray[tmp_pointer])[1:])  # Showing frequency being sent
             serialData.write(bytes([0x02, 0x52, int(mhz_sp), channel_sp, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, checksum]))  # Send volume command
             menu = 10                           # Exiting menu
             char = ''                           # Clear char variable
+            time.sleep(0.15)                     # Short delay to allow processing
+
+        elif char == 'A' and menu == 10:     # Replace with actual condition to activate dual mode
+            serialData.write(bytes([0x02, 0x4F]))  # Send command
+
+        elif char == 'a' and menu == 10:     # Replace with actual condition to deactivate dual mode
+            serialData.write(bytes([0x02, 0x6F]))  # Send command
+
+        elif char == 'B' and menu == 10:     # Call next User-Defined Memory Channel to Standby Field Message
+            serialData.write(bytes([0x02, 0x57]))  # Send command
+
+        elif char == 'b' and menu == 10:     # Call previous User-Defined Memory Channel to Standby Field Message
+            serialData.write(bytes([0x02, 0x77]))  # Send command
+
+        elif char == 'C' and menu == 10:     # Set Channel Spacing to 8.33kHz 
+            serialData.write(bytes([0x02, 0x38]))  # Send command
+
+        elif char == 'c' and menu == 10:     # Set Channel Spacing to 25kHz 
+            serialData.write(bytes([0x02, 0x36]))  # Send command
+        
+        elif char == 'D' and menu == 10:     # Configure PPT buttons
+            #serialData.write(bytes([0x02, 0x32, 0x00]))  # Pilot only
+            #serialData.write(bytes([0x02, 0x32, 0x01]))  # Co-pilot only
+            serialData.write(bytes([0x02, 0x32, 0x02]))  # Both
+        
+        elif char == 'E' and menu == 10:     # Set intercom volume
+            #serialData.write(bytes([0x02, 0x33, 0x01]))  # Intercom volume = 1
+            serialData.write(bytes([0x02, 0x33, 0x04]))  # Intercom volume = 4
+            #serialData.write(bytes([0x02, 0x33, 0x09]))  # Intercom volume = 9
+            
+        elif char == 'F' and menu == 10:     # Set external input volume
+            #serialData.write(bytes([0x02, 0x34, 0x01]))  # External input volume = 1
+            serialData.write(bytes([0x02, 0x34, 0x04]))  # External input volume = 4
+            #serialData.write(bytes([0x02, 0x34, 0x09]))  # External input volume = 9
+
+        elif char == 'G' and menu == 10:     # Set side tone level
+            #serialData.write(bytes([0x02, 0x31, 0x01]))  # Side tone level = 1
+            serialData.write(bytes([0x02, 0x31, 0x04]))  # Side tone level = 4
+            #serialData.write(bytes([0x02, 0x31, 0x09]))  # Side tone level = 9
+
+        elif char == 'H' and menu == 10:     # Set external input volume
+            #serialData.write(bytes([0x02, 0x34, 0x01]))  # External input volume = 1
+            serialData.write(bytes([0x02, 0x34, 0x04]))  # External input volume = 4
+            #serialData.write(bytes([0x02, 0x34, 0x09]))  # External input volume = 9
+
+        elif char == 'I' and menu == 10:     # Set Pilot- and Copilot-Side Microphone Gain
+            #serialData.write(bytes([0x02, 0x49, 0x01]))  # Pilot- and Copilot-Side Microphone Gain = 1
+            serialData.write(bytes([0x02, 0x49, 0x04]))  # Pilot- and Copilot-Side = 4
+            #serialData.write(bytes([0x02, 0x49, 0x09]))  # Pilot- and Copilot-Side = 9
+
+        elif char == 'J' and menu == 10:     # Set Copilot-Side Microphone Gain
+            #serialData.write(bytes([0x02, 0x4A, 0x01]))  # Copilot-Side Microphone Gain = 1
+            serialData.write(bytes([0x02, 0x4A, 0x04]))  # Copilot-Side Microphone Gain = 4
+            #serialData.write(bytes([0x02, 0x4A, 0x09]))  # Copilot-Side Microphone Gain = 9
+
+
+
 
     """if TimeComEstablished + 5 < now and TimeComEstablished > 0 and not x and ComEstablished:
 
@@ -279,18 +425,13 @@ while True:
 
         TimeComEstablished = time.time() 
 
-        x = False
-
-    if now - last_response > 1 and last_response != 0:
-        serialData.write(b'S')
-        print("Sent 'S' to radio")
-        last_response = now"""
+        x = False"""
 
 
     # Active Frequency Message
     if array[0] == '02' and array[1] == '55' and array[12] != '':
         print("Channel active frequency received:")
-        print(f"Array contents: {array}")
+        #print(f"Array contents: {array}")
 
         # Parse 0x02 0x55 message (frequency and name)
         try:
@@ -303,19 +444,20 @@ while True:
         except Exception as e:
             print(f"Error parsing message: {e}")
 
-        ActiveFrequency = [str(mhz), khz]
+        ActiveFrequency = [str(mhz), str(khz)[1:]]
 
-        print("Active frequency: " + ActiveFrequency[0] +  ActiveFrequency[1])
-        print("Standby frequency: " + StandbyFrequency[0] + StandbyFrequency[1])
+        print("Active frequency: " + str(ActiveFrequency[0]) +  str(ActiveFrequency[1]))
+        print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
 
         print(f"Active array: {array}")
+
         array = [''] * 30
         array_pointer = 0
         
     # Standby Frequency Message
     if array[0] == '02' and array[1] == '52' and array[12] != '':
         print("Standby frequency received:")
-        print(f"Array contents: {array}")
+        #print(f"Array contents: {array}")
 
         # Parse 0x02 0x52 message (frequency and name)
         try:
@@ -328,17 +470,21 @@ while True:
         except Exception as e:
             print(f"Error parsing message: {e}")
 
-        StandbyFrequency = [str(stby_mhz), stby_khz]
+        StandbyFrequency = [str(stby_mhz), str(stby_khz)[1:]]
 
-        print("Active frequency: " + ActiveFrequency[0] +  ActiveFrequency[1])
-        print("Standby frequency: " + StandbyFrequency[0] + StandbyFrequency[1])
+        mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
+        channel_sp = stby_channel                # Set kHz setpoint to current kHz
+
+        print("Active frequency: " + str(ActiveFrequency[0]) + str(ActiveFrequency[1]))
+        print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
 
         print(f"Standby array: {array}")
+
         array = [''] * 30
         array_pointer = 0
 
     # Volume Message
-    elif array[0] == '02' and array[1] == '41' and array[5] != '':
+    elif array[0] == '02' and array[1] == '41' and array[4] != '':
         print("Volume received:")
         #print(f"Array contents: {array}")
         volume_hex = array[2]
@@ -354,11 +500,12 @@ while True:
         intercom_sp = intercom
 
         print(f"Volume Level: {volume} Squelch Level: {squelch} Intercom Level: {intercom}")
+
         array = [''] * 30
         array_pointer = 0
 
     # Active and Standby Switch Message
-    elif array[0] == '02' and array[1] == '43'  and array[2] != '':
+    elif array[0] == '02' and array[1] == '43':
         print("Active and standby switched:")
 
         temp_mhz = ActiveFrequency[0]
@@ -370,10 +517,11 @@ while True:
         StandbyFrequency[0] = temp_mhz
         StandbyFrequency[1] = temp_khz
 
-        print("Active frequency: " + ActiveFrequency[0] + ActiveFrequency[1])
-        print("Standby frequency: " + StandbyFrequency[0] + StandbyFrequency[1])
+        print("Active frequency: " + str(ActiveFrequency[0]) + str(ActiveFrequency[1]))
+        print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
 
         #print(f"Array contents: {array}")
+
         array = [''] * 30
         array_pointer = 0
 
@@ -381,13 +529,15 @@ while True:
     elif array[0] == '02' and array[1] == '32'  and array[2] != '':
         print("PTT settings received:")
         #print(f"Array contents: {array}")
-        array = [''] * 30
-        array_pointer = 0
+        shift_array(3)
+        #array = [''] * 30
+        #array_pointer = 0
 
     # Intercom Volume Message
     elif array[0] == '02' and array[1] == '33'  and array[2] != '':
         print("Intercom volume received:")
         #print(f"Array contents: {array}")
+
         array = [''] * 30
         array_pointer = 0
 
@@ -395,6 +545,7 @@ while True:
     elif array[0] == '02' and array[1] == '34'  and array[2] != '':
         print("External volume received:")
         #print(f"Array contents: {array}")
+
         array = [''] * 30
         array_pointer = 0
 
@@ -402,22 +553,7 @@ while True:
     elif array[0] == '02' and array[1] == '31'  and array[2] != '':
         print("Side tone settings received:")
         #print(f"Array contents: {array}")
-        array = [''] * 30
-        array_pointer = 0
 
-    # 8.33 kHz Step Message
-    elif array[0] == '02' and array[1] == '38':
-        print("8.33 kHz step detected")
-        Step25khz = False
-        #print(f"Array contents: {array}")
-        array = [''] * 30
-        array_pointer = 0
-
-    # 25 kHz Step Message
-    elif array[0] == '02' and array[1] == '36':
-        print("25 kHz step detected")
-        Step25khz = True
-        #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
@@ -425,40 +561,30 @@ while True:
     elif array[0] == '02' and array[1] == '49'  and array[2] != '':
         print("Mic gain pilot settings received:")
         #print(f"Array contents: {array}")
+
         array = [''] * 30
         array_pointer = 0
+
 
     # Mic Gain Copilot Settings Message
     elif array[0] == '02' and array[1] == '4A'  and array[2] != '':
         print("Mic gain copilot settings received:")
         #print(f"Array contents: {array}")
+
         array = [''] * 30
         array_pointer = 0
 
-    # Call Next User-Defined Memory Channel to Standby Field Message
-    elif array[0] == '02' and array[1] == '57':
-        print("Call Next User-Defined Memory Channel to Standby Field received")
-        #print(f"Array contents: {array}")
-        array = [''] * 30
-        array_pointer = 0
+    # 
+    elif array[0] == '02':
+        for i in range(0, len(MsgArray), 2):  # Search every second element (0, 2, 4, 6, etc)
+            if MsgArray[i] == array[2]:    # If hex code matches
+                print(MsgArray[i + 1])  # Return the description (odd index)
+                array = [''] * 30
+                array_pointer = 0   
 
-    # Call Previous User-Defined Memory Channel to Standby Field Message
-    elif array[0] == '02' and array[1] == '77':
-        print("Call Previous User-Defined Memory Channel to Standby Field received")
-        #print(f"Array contents: {array}")
-        array = [''] * 30
-        array_pointer = 0
 
-    # Activate DUAL Mode Message
-    elif array[0] == '02' and array[1] == '4F':
-        print("Activate DUAL Mode received")
-        #print(f"Array contents: {array}")
-        array = [''] * 30
-        array_pointer = 0
 
-    # Deactivate DUAL Mode Message
-    elif array[0] == '02' and array[1] == '6F':
-        print("Deactivate DUAL Mode received")
-        #print(f"Array contents: {array}")
-        array = [''] * 30
-        array_pointer = 0
+
+
+    # Flank triggering
+    ComEstablished_old = ComEstablished
