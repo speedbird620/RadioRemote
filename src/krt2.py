@@ -7,10 +7,52 @@ Uses binary protocol from KTR2 manual
 """
 
 import select
+from tkinter import font
 import serial
 import sys
-import signal
 import time
+from smbus2 import SMBus
+
+# OLED display imports
+try:
+    from luma.core.interface.serial import i2c
+    from luma.core.render import canvas
+    from luma.oled.device import sh1106, ssd1306
+    from PIL import Image, ImageDraw, ImageFont
+    font = ImageFont.load_default()
+    OLED_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: OLED display modules not available: {e}")
+    print("Install with: pip3 install --break-system-packages luma.oled pillow")
+    OLED_AVAILABLE = False
+
+
+I2C_DISPLAY_ADDRESS = 0x3d  # I2C address of the OLED display
+I2C_BUS = 1  # I2C bus number (usually 1 on Raspberry Pi)
+# Create I2C interface for OLED
+oled_font = None
+if OLED_AVAILABLE:
+    try:
+        i2c_serial = i2c(port=I2C_BUS, address=I2C_DISPLAY_ADDRESS)
+        device = sh1106(i2c_serial, width=128, height=64, rotate=0)
+        print("✓ OLED display initialized (SH1106)")
+        # Load a larger TrueType font
+        try:
+            # Try to load a larger font (24pt)
+            oled_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+            print("✓ Loaded large font (20pt)")
+        except FileNotFoundError:
+            try:
+                # Fallback to smaller size if 20pt not available
+                oled_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+                print("✓ Loaded font (18pt)")
+            except Exception as e:
+                print(f"Warning: Could not load TrueType font: {e}")
+                oled_font = ImageFont.load_default()
+                print("✓ Using default small font")
+    except Exception as e:
+        print(f"Error initializing OLED display: {e}")
+        OLED_AVAILABLE = False
 
 serialData = serial.Serial('/dev/ttyAMA0',9600, timeout=0.1) 
 
@@ -25,22 +67,31 @@ DuplexComEstablished = False
 TimeComEstablished = 0
 Step25khz = False
 menu = 10
+menu_old = 10
 volume = 0
+volume_old = 0
 volume_sp = 0
 squelch = 0
+squelch_old = 0
 squelch_sp = 0
 intercom = 0
+intercom_old = 0
 mhz = 118
 stby_mhz = 118
 mhz_sp = 118
+mhz_sp_old = 118
 khz = 0.0
 channel = 0
 stby_channel = 0
 channel_sp = 0
+channel_sp_old = 0
 tmp_pointer = 0
+tmp_pointer_old = 0
 intercom_sp = 0
 ActiveFrequency = ['','']
+ActiveFrequency_old = ['','']
 StandbyFrequency = ['','']
+StandbyFrequency_old = ['','']  
 switch_active_standby = False
 
 x = False
@@ -103,6 +154,8 @@ MsgArray = ['42',"Low battery",
 while True:
     now = time.time() #/1000
     
+    # ----------------------o0 Start of bitbanging 0o----------------------
+
     data = serialData.read(1)   # Reading one byte from serial port
     if data != b'': 
         print(f"Raw response: {data.hex()}")
@@ -142,7 +195,7 @@ while True:
             StandbyFrequency[0] = stby_mhz
 
         if channel_sp != stby_channel:
-            stby_channel = channel_sp
+            stby_channel = khz_sp
             StandbyFrequency[1] = stby_channel
 
         if switch_active_standby:
@@ -215,6 +268,9 @@ while True:
         array_pointer = 0                       # Resetting array pointer   
 
 
+    # ----------------------o0 User input handling 0o----------------------
+
+
     # Test code for an Raspberry PI 5 in Visual Studio Code
     # A character is sent to the Rpi5 via keyboard. Note character needs Enter to be sent
     if select.select([sys.stdin], [], [], 0)[0]:
@@ -282,7 +338,7 @@ while True:
 
         # User wants to enter nXX kHz menu
         elif char == '4' and menu == 20:
-            tmp_pointer = stby_channel               # Set kHz setpoint to current kHz
+            tmp_pointer = stby_channel          # Set kHz setpoint to current kHz
             print("Meny: " + str(menu))         # Showing current menu
             print("kHz SP = " + str(DecArray[tmp_pointer])[:3] + 'xx')    # Showing current kHz setpoint
             menu = 30
@@ -336,7 +392,9 @@ while True:
             print("Meny: " + str(menu))             # Showing current menu
             channel_sp = (HexArray[tmp_pointer])    # Setting channel setpoint
             checksum = int(mhz_sp) ^ channel_sp     # Calculate checksum4
+            khz_sp = str(DecArray[tmp_pointer])[1:]            # Setting kHz setpoint
             print("Sending to radio: " + str(mhz_sp) + str(DecArray[tmp_pointer])[1:])  # Showing frequency being sent
+
             serialData.write(bytes([0x02, 0x52, int(mhz_sp), channel_sp, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, checksum]))  # Send volume command
             menu = 10                           # Exiting menu
             char = ''                           # Clear char variable
@@ -398,93 +456,56 @@ while True:
 
 
 
-    """if TimeComEstablished + 5 < now and TimeComEstablished > 0 and not x and ComEstablished:
-
-        #volume = 12
-        #squelch = 4
-        #intercom = 6
-        #volume = volume - 1
-        checksum = squelch + intercom
-        serialData.write(bytes([0x02, 0x41, volume, squelch, intercom, checksum]))  # Send volume command
-        print("Sent volume command")
-
-        # 123.375: '02', '55', '7b', '4b', '20', '20', '20', '20', '20', '20', '20', '20', '30',
-        # 123.000: '02', '52', '7b', '00', '20', '20', '20', '20', '20', '20', '20', '20', '7b',
-
-        x = True"""
-
-    """if TimeComEstablished + 1 < now and TimeComEstablished > 0 and ComEstablished:
-
-        y = y + 1
-        mHz_x = 123
-        channel_x = HexArray[y]
-        checksum = mHz_x ^ channel_x
-
-        #                        '02', '52', '7b',  '00', '20', '20', '20', '20', '20', '20', '20', '20', '7b',
-        serialData.write(bytes([0x02, 0x52, mHz_x, channel_x, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, checksum]))  # Send volume command
-        #serialData.write(bytes([0x02, 0x52, mHz_x, channel_x, 0x48, 0x45, 0x4a, 0x45, 0x4c, 0x49, 0x41, 0x53, checksum]))  # Hej Elias
-        print("Sent standby frequency command")
-        time.sleep(0.1)
-
-        TimeComEstablished = time.time() 
-
-        x = False"""
-
+    # ----------------------o0 Handling of incoming medssages =o----------------------
 
     # Active Frequency Message
     if array[0] == '02' and array[1] == '55' and array[12] != '':
-        print("Channel active frequency received:")
+        print("Active frequency received:")
         #print(f"Array contents: {array}")
 
-        # Parse 0x02 0x55 message (frequency and name)
         try:
-            mhz = int(array[2], 16)
-            
-            # Find array[3] hex value in HexArray to get channel index
-            channel = HexArray.index(int(array[3], 16))
-            khz = DecArray[channel]
+            mhz = int(array[2], 16)                         # Assigning MHz value
+            channel = HexArray.index(int(array[3], 16))     # Finding out the decimals
+            khz = DecArray[channel]                         # Assigning a readable kHz value
                         
         except Exception as e:
-            print(f"Error parsing message: {e}")
+            print(f"Error parsing message: {e}")            # Failing gracefully
 
-        ActiveFrequency = [str(mhz), str(khz)[1:]]
+        ActiveFrequency = [str(mhz), str(khz)[1:]]          # Storing active frequency
 
-        print("Active frequency: " + str(ActiveFrequency[0]) +  str(ActiveFrequency[1]))
+        print("Active frequency: " + str(ActiveFrequency[0]) +  str(ActiveFrequency[1]))    # Showing them is someone is interested
         print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
 
-        print(f"Active array: {array}")
+        #print(f"Active array: {array}")
 
-        array = [''] * 30
-        array_pointer = 0
+        array = [''] * 30               # Resetting the leftovers
+        array_pointer = 0               # Resetting array pointer       
         
     # Standby Frequency Message
     if array[0] == '02' and array[1] == '52' and array[12] != '':
         print("Standby frequency received:")
         #print(f"Array contents: {array}")
 
-        # Parse 0x02 0x52 message (frequency and name)
         try:
-            stby_mhz = int(array[2], 16)
-            
-            # Find array[3] hex value in HexArray to get channel index
-            stby_channel = HexArray.index(int(array[3], 16))
-            stby_khz = DecArray[stby_channel]
+            stby_mhz = int(array[2], 16)                        # Assigning MHz value
+            stby_channel = HexArray.index(int(array[3], 16))    # Finding out the decimals     
+            stby_khz = DecArray[stby_channel]                   # Assigning a readable kHz value
                         
         except Exception as e:
-            print(f"Error parsing message: {e}")
+            print(f"Error parsing message: {e}")        # Failing gracefully    
 
-        StandbyFrequency = [str(stby_mhz), str(stby_khz)[1:]]
+        StandbyFrequency = [str(stby_mhz), str(stby_khz)[1:]]   # Storing standby frequency
 
         mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
         channel_sp = stby_channel                # Set kHz setpoint to current kHz
 
-        print("Active frequency: " + str(ActiveFrequency[0]) + str(ActiveFrequency[1]))
+        print("Active frequency: " + str(ActiveFrequency[0]) + str(ActiveFrequency[1]))    # Showing them is someone is interested
         print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
 
-        print(f"Standby array: {array}")
+        #print(f"Standby array: {array}")
 
-        array = [''] * 30
-        array_pointer = 0
+        array = [''] * 30        # Resetting the leftovers
+        array_pointer = 0        # Resetting array pointer
 
     # Volume Message
     elif array[0] == '02' and array[1] == '41' and array[4] != '':
@@ -532,9 +553,8 @@ while True:
     elif array[0] == '02' and array[1] == '32'  and array[2] != '':
         print("PTT settings received:")
         #print(f"Array contents: {array}")
-        shift_array(3)
-        #array = [''] * 30
-        #array_pointer = 0
+        array = [''] * 30
+        array_pointer = 0
 
     # Intercom Volume Message
     elif array[0] == '02' and array[1] == '33'  and array[2] != '':
@@ -587,7 +607,50 @@ while True:
 
 
 
+    # ----------------------o0 Display handling 0o----------------------
+
+    if OLED_AVAILABLE:
+        # Width: 128, Height: 64
+        if menu == 10 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency):
+            with canvas(device) as draw:
+                # Display with larger TrueType font
+                draw.text((0, 0), "Vol:" + str(volume) + " Sq:" + str(squelch), fill="white", font=font)
+                draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
+                draw.text((0, 38), str(StandbyFrequency[0]) + str(StandbyFrequency[1]), fill="white", font=oled_font)
+        if menu == 20 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or mhz_sp_old != mhz_sp):
+            with canvas(device) as draw:
+                # Display with larger TrueType font
+                draw.text((0, 0), "Vol:" + str(volume) + " Sq:" + str(squelch), fill="white", font=font)
+                draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
+                # Standby frequency with black text on white background (highlighted)
+                draw.rectangle((0, 38, 60, 60), fill="white")
+                draw.text((0, 38), str(mhz_sp) + ".nnn", fill="black", font=oled_font)
+        if menu == 30 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or tmp_pointer_old != tmp_pointer):
+            with canvas(device) as draw:
+                # Display with larger TrueType font
+                draw.text((0, 0), "Vol:" + str(volume) + " Sq:" + str(squelch), fill="white", font=font)
+                draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
+                # Standby frequency with black text on white background (highlighted)
+                draw.rectangle((80, 38, 100, 60), fill="white")
+                draw.text((0, 38), str(mhz_sp) + str(DecArray[tmp_pointer])[1:3] + 'xx', fill="black", font=oled_font)
+        if menu == 40 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or tmp_pointer_old != tmp_pointer):
+            with canvas(device) as draw:
+                # Display with larger TrueType font
+                draw.text((0, 0), "Vol:" + str(volume) + " Sq:" + str(squelch), fill="white", font=font)
+                draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
+                # Standby frequency with black text on white background (highlighted)
+                draw.rectangle((100, 38, 128, 60), fill="white")
+                draw.text((0, 38), str(mhz_sp) + str(DecArray[tmp_pointer][1:]), fill="black", font=oled_font)
 
 
     # Flank triggering
+    menu_old = menu
+    volume_old = volume
+    squelch_old = squelch
+    intercom_old = intercom 
+    mhz_sp_old = mhz_sp
+    channel_sp_old = channel_sp
+    tmp_pointer_old = tmp_pointer
+    ActiveFrequency_old = ActiveFrequency.copy()
+    StandbyFrequency_old = StandbyFrequency.copy()
     ComEstablished_old = ComEstablished
