@@ -623,7 +623,7 @@ while True:
                 draw.text((0, 0), "Vol:" + str(volume) + " Sq:" + str(squelch), fill="white", font=font)
                 draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
                 # Standby frequency with black text on white background (highlighted)
-                draw.rectangle((0, 38, 60, 60), fill="white")
+                draw.rectangle((0, 38, 128, 60), fill="white")
                 draw.text((0, 38), str(mhz_sp) + ".nnn", fill="black", font=oled_font)
         if menu == 30 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or tmp_pointer_old != tmp_pointer):
             with canvas(device) as draw:
@@ -631,7 +631,7 @@ while True:
                 draw.text((0, 0), "Vol:" + str(volume) + " Sq:" + str(squelch), fill="white", font=font)
                 draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
                 # Standby frequency with black text on white background (highlighted)
-                draw.rectangle((80, 38, 100, 60), fill="white")
+                draw.rectangle((0, 38, 128, 60), fill="white")
                 draw.text((0, 38), str(mhz_sp) + str(DecArray[tmp_pointer])[1:3] + 'xx', fill="black", font=oled_font)
         if menu == 40 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or tmp_pointer_old != tmp_pointer):
             with canvas(device) as draw:
@@ -639,7 +639,7 @@ while True:
                 draw.text((0, 0), "Vol:" + str(volume) + " Sq:" + str(squelch), fill="white", font=font)
                 draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
                 # Standby frequency with black text on white background (highlighted)
-                draw.rectangle((100, 38, 128, 60), fill="white")
+                draw.rectangle((0, 38, 128, 60), fill="white")
                 draw.text((0, 38), str(mhz_sp) + str(DecArray[tmp_pointer][1:]), fill="black", font=oled_font)
 
 
