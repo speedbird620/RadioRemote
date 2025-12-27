@@ -120,29 +120,53 @@ DecArray = [
     "0.800", "0.805", "0.810", "0.815", "0.825", "0.830", "0.835", "0.840", "0.850", "0.855", "0.860", "0.865", "0.875", "0.880", "0.885", "0.890", 
     "0.900", "0.905", "0.910", "0.915", "0.925", "0.930", "0.935", "0.940", "0.950", "0.955", "0.960", "0.965", "0.975", "0.980", "0.985", "0.990"]
 
-MsgArray = ['42',"Low battery",
-            '44',"Cancel low battery",
-            '4a',"RX",
-            '56',"Cancel RX",
-            '4b',"TX",
-            '59',"Cancel RX, TX or DUAL-RX",
-            '4c',"TX timeout",
-            '4f',"DUAL mode on",
-            '6f',"DUAL mode off",
-            '4d',"DUAL-RX active",
-            '6d',"DUAL-RX stby",
-            '61',"ADC error",
-            '62',"Antenna impedance mismatch – high VSWR",
-            '63',"FPAA error, startup blocked",
-            '64',"Frequency synthesizer error",
-            '65',"PLL error",
-            '66',"Key inputs blocked",
-            '67',"I2C bus error",
-            '68',"Antenna switch error or damaged D10 diode",
-            '46',"Clear all errors",
-            '38',"8.33 kHz step",
-            '36',"25 kHz step",
-            ]
+
+ByteArray = bytearray([0x42,
+            0x44,
+            0x4a,
+            0x56,
+            0x4b,
+            0x59,
+            0x4c,
+            0x4f,
+            0x6f,
+            0x4d,
+            0x6d,
+            0x61,
+            0x62,
+            0x63,
+            0x64,
+            0x65,
+            0x66,
+            0x67,
+            0x68,
+            0x46,
+            0x38,
+            0x36])
+
+MsgArray = ["Low battery",
+           "Cancel low battery",
+           "Tranciever RX",
+           "Cancel reciever RX",
+           "Tranciever TX",
+           "Cancel RX, TX or DUAL-RX",
+           "TX timeout (stuck mic)",
+           "DUAL mode on",
+           "DUAL mode off",
+           "DUAL-RX active",
+           "DUAL-RX stby",
+           "ADC error",
+           "Antenna impedance mismatch – high VSWR",
+           "FPAA error, startup blocked",
+           "Frequency synthesizer error",
+           "PLL error",
+           "Key inputs blocked",
+           "I2C bus error",
+           "Antenna switch error or damaged D10 diode",
+           "Clear all errors",
+           "8.33 kHz step",
+           "25 kHz step"]
+
 
 
 while True:
@@ -181,12 +205,11 @@ while True:
             question_pi2radio = now      
             reply_pi2radio = now
 
-
         array = [''] * 30                   # Resetting array
         array_pointer = 0                   # Resetting array pointer   
 
     # Radio replies with ACK in response from an earlier message from us
-    elif data == '06' and array_pointer == 0:
+    elif data == b'\x06' and array_pointer == 0:
         print(f"Radio replied OK")
 
         # Confirming that setpoints has been accepted by the radio
@@ -214,7 +237,7 @@ while True:
             print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
 
     # Radio replies with NAK in response from an earlier message from us
-    elif data == '15' and array_pointer == 0:
+    elif data == b'\x15' and array_pointer == 0:
         print(f"Bugger, radio replied Not OK")
 
         # Reverting setpoints
@@ -231,9 +254,9 @@ while True:
             switch_active_standby = False
 
     # Radio replies with SOH since we earelier sent 'S' to chack duplex communication
-    elif data == '01' and array_pointer == 0:
+    elif data == b'\x01' and array_pointer == 0:
         DuplexComEstablished = True             # Nice, we have duplex communication
-        #print(f"Radio replied with SOH at start of message: " + str(now)) 
+        print(f"Radio replied with SOH at start of message: " + str(now)) 
         reply_pi2radio = now
 
     # Something else received, store in array
@@ -266,7 +289,7 @@ while True:
         ComEstablished = False                  # Communication lost
 
     # Something is wrong, Throw the array to the floor.
-    if array[0] != '01' and array[0] != '02' and array[0] != '06' and array[0] != '15' and array[0] != '':
+    if array[0] != b'\x01' and array[0] != b'\x02' and array[0] != b'\x06' and array[0] != b'\x15' and array[0] != '':
         array = [''] * 30                       # Resetting array
         array_pointer = 0                       # Resetting array pointer   
 
@@ -487,17 +510,16 @@ while True:
     # ----------------------o0 Handling of incoming medssages =o----------------------
 
     # Active Frequency Message
-    if array[0] == '02' and array[1] == '55' and array[12] != '':
+    if array[0] == b'\x02' and array[1] == b'\x55' and array[12] != '':
         print("Active frequency received:")
         #print(f"Array contents: {array}")
 
         try:
-            mhz = int(array[2], 16)                         # Assigning MHz value
-            channel = HexArray.index(int(array[3], 16))     # Finding out the decimals
+            mhz = ord(array[2])                        # Assigning MHz value
+            channel = HexArray.index(int(hex(ord(array[3])), 16))     # Finding out the decimals
             khz = DecArray[channel]                         # Assigning a readable kHz value
-                        
-        except Exception as e:
-            print(f"Error parsing message: {e}")            # Failing gracefully
+        except:
+            print(f"Error parsing message: {e}")        # Failing gracefully    
 
         ActiveFrequency = [str(mhz), str(khz)[1:]]          # Storing active frequency
 
@@ -510,15 +532,14 @@ while True:
         array_pointer = 0               # Resetting array pointer       
         
     # Standby Frequency Message
-    if array[0] == '02' and array[1] == '52' and array[12] != '':
+    if array[0] == b'\x02' and array[1] == b'\x52' and array[12] != '':
         print("Standby frequency received:")
         #print(f"Array contents: {array}")
 
         try:
-            stby_mhz = int(array[2], 16)                        # Assigning MHz value
-            stby_channel = HexArray.index(int(array[3], 16))    # Finding out the decimals     
+            stby_mhz = ord(array[2])                        # Assigning MHz value
+            stby_channel = HexArray.index(int(hex(ord(array[3])), 16))     # Finding out the decimals
             stby_khz = DecArray[stby_channel]                   # Assigning a readable kHz value
-                        
         except Exception as e:
             print(f"Error parsing message: {e}")        # Failing gracefully    
 
@@ -536,19 +557,26 @@ while True:
         array_pointer = 0        # Resetting array pointer
 
     # Volume Message
-    elif array[0] == '02' and array[1] == '41' and array[4] != '':
+    elif array[0] == b'\x02' and array[1] == b'\x41' and array[4] != '':
         print("Volume received:")
         #print(f"Array contents: {array}")
         volume_hex = array[2]
-        volume = int(array[2], 16)
+
+        #volume = int(array[2], 16)
+        volume = int(array[2].hex(), 16)
+
         volume_sp = volume
         
         squelch_hex = array[3]
-        squelch = int(array[3], 16)
+        
+        #squelch = int(array[3], 16)
+        squelch = int(array[3].hex(), 16)
+        
         squelch_sp = squelch
 
         intercom_hex = array[4]
-        intercom = int(array[4], 16)
+        #intercom = int(array[4], 16)
+        intercom = int(array[4].hex(), 16)
         intercom_sp = intercom
 
         print(f"Volume Level: {volume} Squelch Level: {squelch} Intercom Level: {intercom}")
@@ -557,7 +585,7 @@ while True:
         array_pointer = 0
 
     # Active and Standby Switch Message
-    elif array[0] == '02' and array[1] == '43':
+    elif array[0] == b'\x02' and array[1] == b'\x43':
         print("Active and standby switched:")
 
         temp_mhz = ActiveFrequency[0]
@@ -578,14 +606,14 @@ while True:
         array_pointer = 0
 
     # PTT Settings Message
-    elif array[0] == '02' and array[1] == '32'  and array[2] != '':
+    elif array[0] == b'\x02' and array[1] == b'\x32'  and array[2] != '':
         print("PTT settings received:")
         #print(f"Array contents: {array}")
         array = [''] * 30
         array_pointer = 0
 
     # Intercom Volume Message
-    elif array[0] == '02' and array[1] == '33'  and array[2] != '':
+    elif array[0] == b'\x02' and array[1] == b'\x33'  and array[2] != '':
         print("Intercom volume received:")
         #print(f"Array contents: {array}")
 
@@ -593,7 +621,7 @@ while True:
         array_pointer = 0
 
     # External Volume Message
-    elif array[0] == '02' and array[1] == '34'  and array[2] != '':
+    elif array[0] == b'\x02' and array[1] == b'\x34'  and array[2] != '':
         print("External volume received:")
         #print(f"Array contents: {array}")
 
@@ -601,7 +629,7 @@ while True:
         array_pointer = 0
 
     # Side Tone Settings Message
-    elif array[0] == '02' and array[1] == '31'  and array[2] != '':
+    elif array[0] == b'\x02' and array[1] == b'\x31'  and array[2] != '':
         print("Side tone settings received:")
         #print(f"Array contents: {array}")
 
@@ -609,7 +637,7 @@ while True:
         array_pointer = 0
 
     # Mic Gain Pilot Settings Message
-    elif array[0] == '02' and array[1] == '49'  and array[2] != '':
+    elif array[0] == b'\x02' and array[1] == b'\x49'  and array[2] != '':
         print("Mic gain pilot settings received:")
         #print(f"Array contents: {array}")
 
@@ -618,26 +646,52 @@ while True:
 
 
     # Mic Gain Copilot Settings Message
-    elif array[0] == '02' and array[1] == '4A'  and array[2] != '':
+    elif array[0] == b'\x02' and array[1] == b'\x4A'  and array[2] != '':
         print("Mic gain copilot settings received:")
         #print(f"Array contents: {array}")
 
         array = [''] * 30
         array_pointer = 0
 
-    # Generic message lookup for other MsgArray codes
-    elif array[0] == '02' and array[1] != '':
-        # Convert bytes to hex string for comparison
-        if isinstance(array[1], bytes):
-            hex_str = array[1].hex()
-        else:
-            hex_str = array[1]
+    elif array[0] == b'\x02' and array[1] != b'':
+        # Convert the byte to ASCII character
+        byte_char = array[1].decode() if isinstance(array[1], bytes) else array[1]
         
-        for i in range(0, len(MsgArray), 2):  # Search every second element (0, 2, 4, 6, etc)
-            if MsgArray[i] == hex_str:    # If hex code matches
-                print(MsgArray[i + 1])  # Return the description (odd index)
+        for i in range(0, len(ByteArray)):
+            msg_char = chr(ByteArray[i])
+            
+            if msg_char == byte_char:
+                print(MsgArray[i])
                 array = [''] * 30
-                array_pointer = 0   
+                array_pointer = 0
+
+
+    """elif array[0] == b'\x02' and array[1] != b'':
+        for i in range(0, len(ByteArray)):
+            if ByteArray[i] == array[1][0]:  # Compare the first byte value directly
+                print(MsgArray[i])
+                array = [''] * 30
+                array_pointer = 0
+
+    # 
+    elif array[0] == b'\x02' and array[1] != b'':
+        for i in range(0, len(ByteArray), 1):
+            #if ByteArray[i] == array[1]:  # Now comparing strings
+            print("x: " + chr(ByteArray[i]))
+            print("y: " + array[1].decode())
+           
+            if chr(ByteArray[i]) == array[1].decode():  # Now comparing strings
+                print(MsgArray[i])
+                array = [''] * 30
+                array_pointer = 0
+
+    # Mic Gain Copilot Settings Message
+    elif array[0] == b'\x02' and array[1] == b'\x38':
+        print("08.33 kHz")
+        #print(f"Array contents: {array}")
+
+        array = [''] * 30
+        array_pointer = 0"""
 
 
 
@@ -657,4 +711,5 @@ while True:
     
     # Small delay to prevent CPU spinning
     time.sleep(0.01)
+
 
