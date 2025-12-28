@@ -180,17 +180,21 @@ intercom = -1
 intercom_old = 0
 mhz = -1
 stby_mhz = -1
-mhz_sp = 118
-mhz_sp_old = 118
+stby_mhz_sp = 118
+stby_mhz_sp_old = 118
 khz = 0.0
 channel = 0
 stby_channel = 0
-channel_sp = 0
-channel_sp_old = 0
+stby_channel_sp = 0
+stby_channel_sp_old = 0
 tmp_pointer = 0
 tmp_pointer_old = 0
 intercom_sp = 0
 ActiveFrequency = ['','']
+ActiveFrequency0_old = ''
+ActiveFrequency1_old = ''
+StandbyFrequency0_old = ''
+StandbyFrequency1_old = ''
 ActiveFrequency_old = ['','']
 StandbyFrequency = ['','']
 StandbyFrequency_old = ['','']  
@@ -229,18 +233,24 @@ HexArray = [
     0xa0,  0xa1,  0xa2,  0xa3,  0xa5,  0xa6,  0xa7,  0xa8,  0xaa,  0xab,  0xac,  0xad,  0xaf,  0xb0,  0xb1,  0xb2, #.8nn
     0xb4,  0xb5,  0xb6,  0xb7,  0xb9,  0xba,  0xbb,  0xbc,  0xbe,  0xbf,  0xc0,  0xc1,  0xc3,  0xc4,  0xc5,  0xc6] #.9nn
 
-
+#    nn0      nn1      nn2      nn3      nn4      nn5      nn6      nn7      nn8      nn9      
 DecArray = [
-    "0.000", "0.005", "0.010", "0.015", "0.025", "0.030", "0.035", "0.040", "0.050", "0.055", "0.060", "0.065", "0.075", "0.080", "0.085", "0.090", 
-    "0.100", "0.105", "0.110", "0.115", "0.125", "0.130", "0.135", "0.140", "0.150", "0.155", "0.160", "0.165", "0.175", "0.180", "0.185", "0.190", 
-    "0.200", "0.205", "0.210", "0.215", "0.225", "0.230", "0.235", "0.240", "0.250", "0.255", "0.260", "0.265", "0.275", "0.280", "0.285", "0.290", 
-    "0.300", "0.305", "0.310", "0.315", "0.325", "0.330", "0.335", "0.340", "0.350", "0.355", "0.360", "0.365", "0.375", "0.380", "0.385", "0.390", 
-    "0.400", "0.405", "0.410", "0.415", "0.425", "0.430", "0.435", "0.440", "0.450", "0.455", "0.460", "0.465", "0.475", "0.480", "0.485", "0.490",
-    "0.500", "0.505", "0.510", "0.515", "0.525", "0.530", "0.535", "0.540", "0.550", "0.555", "0.560", "0.565", "0.575", "0.580", "0.585", "0.590", 
-    "0.600", "0.605", "0.610", "0.615", "0.625", "0.630", "0.635", "0.640", "0.650", "0.655", "0.660", "0.665", "0.675", "0.680", "0.685", "0.690", 
-    "0.700", "0.705", "0.710", "0.715", "0.725", "0.730", "0.735", "0.740", "0.750", "0.755", "0.760", "0.765", "0.775", "0.780", "0.785", "0.790", 
-    "0.800", "0.805", "0.810", "0.815", "0.825", "0.830", "0.835", "0.840", "0.850", "0.855", "0.860", "0.865", "0.875", "0.880", "0.885", "0.890", 
-    "0.900", "0.905", "0.910", "0.915", "0.925", "0.930", "0.935", "0.940", "0.950", "0.955", "0.960", "0.965", "0.975", "0.980", "0.985", "0.990"]
+    "0.000", "0.005", "0.010", "0.015", "0.025", "0.030", "0.035", "0.040", "0.050", "0.055", #00n
+    "0.060", "0.065", "0.075", "0.080", "0.085", "0.090", "0.100", "0.105", "0.110", "0.115", #01n
+    "0.125", "0.130", "0.135", "0.140", "0.150", "0.155", "0.160", "0.165", "0.175", "0.180", #02n
+    "0.185", "0.190", "0.200", "0.205", "0.210", "0.215", "0.225", "0.230", "0.235", "0.240", #03n
+    "0.250", "0.255", "0.260", "0.265", "0.275", "0.280", "0.285", "0.290", "0.300", "0.305", #04n
+    "0.310", "0.315", "0.325", "0.330", "0.335", "0.340", "0.350", "0.355", "0.360", "0.365", #05n
+    "0.375", "0.380", "0.385", "0.390", "0.400", "0.405", "0.410", "0.415", "0.425", "0.430", #06n
+    "0.435", "0.440", "0.450", "0.455", "0.460", "0.465", "0.475", "0.480", "0.485", "0.490", #07n
+    "0.500", "0.505", "0.510", "0.515", "0.525", "0.530", "0.535", "0.540", "0.550", "0.555", #08n
+    "0.560", "0.565", "0.575", "0.580", "0.585", "0.590", "0.600", "0.605", "0.610", "0.615", #09n
+    "0.625", "0.630", "0.635", "0.640", "0.650", "0.655", "0.660", "0.665", "0.675", "0.680", #10n
+    "0.685", "0.690", "0.700", "0.705", "0.710", "0.715", "0.725", "0.730", "0.735", "0.740", #11n
+    "0.750", "0.755", "0.760", "0.765", "0.775", "0.780", "0.785", "0.790", "0.800", "0.805", #12n
+    "0.810", "0.815", "0.825", "0.830", "0.835", "0.840", "0.850", "0.855", "0.860", "0.865", #13n
+    "0.875", "0.880", "0.885", "0.890", "0.900", "0.905", "0.910", "0.915", "0.925", "0.930", #14n
+    "0.935", "0.940", "0.950", "0.955", "0.960", "0.965", "0.975", "0.980", "0.985", "0.990"] #15n
 
 
 ByteArray = bytearray([0x42,
@@ -367,21 +377,56 @@ while True:
         if volume_sp != volume:
             volume = volume_sp
 
-        if mhz_sp != stby_mhz:
-            stby_mhz = mhz_sp
+        if stby_mhz_sp != stby_mhz:
+
+            print("A : " + str(stby_mhz_sp))
+            print("B : " + str(stby_mhz))
+
+            print("C : " + str(StandbyFrequency[0]))
+
+            stby_mhz = stby_mhz_sp
+            print("D : " + str(stby_mhz))
+
             StandbyFrequency[0] = stby_mhz
 
-        if channel_sp != stby_channel:
-            stby_channel = channel_sp
-            StandbyFrequency[1] = stby_channel
+            print("E : " + str(StandbyFrequency[0]))
+
+
+        if stby_channel_sp != stby_channel:
+            
+            print("F : " + str(stby_channel_sp))
+            print("G : " + str(stby_channel))
+
+            stby_channel = stby_channel_sp
+
+            print("H : " + str(stby_channel))
+
+            StandbyFrequency[1] = DecArray[tmp_pointer][1:]
+
+            print("I : " + str(StandbyFrequency[1]))
 
         if switch_active_standby:
+
+            print("K : " + str(ActiveFrequency[0]))
+            print("L : " + str(ActiveFrequency[1]))
             temp_mhz = ActiveFrequency[0]
             temp_khz = ActiveFrequency[1]
+
+            print("M : " + str(temp_mhz))
+            print("N : " + str(temp_khz))
+
+            print("O : " + str(StandbyFrequency[0]))
+            print("P : " + str(StandbyFrequency[1]))
             ActiveFrequency[0] = StandbyFrequency[0]
             ActiveFrequency[1] = StandbyFrequency[1]
+            
+            
             StandbyFrequency[0] = temp_mhz
             StandbyFrequency[1] = temp_khz
+
+            print("Q : " + str(ActiveFrequency[0]))
+            print("R : " + str(ActiveFrequency[1]))
+
             switch_active_standby = False
             print("Switched active and standby frequencies")
             print("Active frequency: " + str(ActiveFrequency[0]) + str(ActiveFrequency[1]))
@@ -395,11 +440,11 @@ while True:
         if volume_sp != volume:
             volume_sp = volume
 
-        if mhz_sp != stby_mhz:
-            mhz_sp = stby_mhz
+        if stby_mhz_sp != stby_mhz:
+            stby_mhz_sp = stby_mhz_sp
 
-        if channel_sp != khz:
-            channel_sp = khz  
+        if stby_channel_sp != stby_khz:
+            stby_channel_sp = stby_khz  
 
         if switch_active_standby:
             switch_active_standby = False
@@ -499,30 +544,30 @@ while True:
 
     # User wants to enter frequency menu
     if freq_enter() and not freq_enter_old and menu == 10 and stby_mhz >= 0:
-        mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
-        print("MHz SP = " + str(mhz_sp))    # Showing current MHz setpoint
+        stby_mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
+        print("MHz SP = " + str(stby_mhz_sp))    # Showing current MHz setpoint
         char = ''                           # Clear char variable
         menu = 20                           # Entering the menu
         
     # User wants to increase mHz setpoint
     elif freq_plus() and not freq_plus_old and menu == 20:
-        mhz_sp += 1                         # Notching up setpoint
+        stby_mhz_sp += 1                         # Notching up setpoint
 
-        if mhz_sp > 136:                    # End of airband. 
-            mhz_sp = 118                    # Continuing from bottom.
+        if stby_mhz_sp > 136:                    # End of airband. 
+            stby_mhz_sp = 118                    # Continuing from bottom.
 
         print("Meny: " + str(menu))         # Showing current menu
-        print("MHz SP = " + str(mhz_sp))    # Showing current MHz setpoint
+        print("MHz SP = " + str(stby_mhz_sp))    # Showing current MHz setpoint
         char = ''                           # Clear char variable
     
     # User wants to decrease mHz setpoint
     elif freq_minus() and not freq_minus_old and menu == 20:
-        mhz_sp -= 1                         # Notching down setpoint
-        if mhz_sp < 118:                    # End of airband
-            mhz_sp = 136                    # Continuing from top
+        stby_mhz_sp -= 1                         # Notching down setpoint
+        if stby_mhz_sp < 118:                    # End of airband
+            stby_mhz_sp = 136                    # Continuing from top
 
         print("Meny: " + str(menu))         # Showing current menu
-        print("MHz SP = " + str(mhz_sp))    # Showing current MHz setpoint
+        print("MHz SP = " + str(stby_mhz_sp))    # Showing current MHz setpoint
         char = ''                           # Clear char variable
 
     # User wants to enter nXX kHz menu
@@ -579,12 +624,12 @@ while True:
     # User wants to set frequency
     elif freq_enter() and not freq_enter_old and menu == 40:
         print("Meny: " + str(menu))             # Showing current menu
-        channel_sp = (HexArray[tmp_pointer])    # Setting channel setpoint
-        checksum = int(mhz_sp) ^ channel_sp     # Calculate checksum4
+        stby_channel_sp = (HexArray[tmp_pointer])    # Setting channel setpoint
+        checksum = int(stby_mhz_sp) ^ stby_channel_sp     # Calculate checksum4
         khz_sp = str(DecArray[tmp_pointer])[1:]            # Setting kHz setpoint
-        print("Sending to radio: " + str(mhz_sp) + str(DecArray[tmp_pointer])[1:])  # Showing frequency being sent
+        print("Sending to radio: " + str(stby_mhz_sp) + str(DecArray[tmp_pointer])[1:])  # Showing frequency being sent
 
-        serialData.write(bytes([0x02, 0x52, int(mhz_sp), channel_sp, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, checksum]))  # Send volume command
+        serialData.write(bytes([0x02, 0x52, int(stby_mhz_sp), stby_channel_sp, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, checksum]))  # Send volume command
         menu = 10                           # Exiting menu
         char = ''                           # Clear char variable
         time.sleep(0.15)                     # Short delay to allow processing
@@ -642,44 +687,6 @@ while True:
         serialData.write(bytes([0x02, 0x4A, 0x04]))  # Copilot-Side Microphone Gain = 4
         #serialData.write(bytes([0x02, 0x4A, 0x09]))  # Copilot-Side Microphone Gain = 9
 
-
-    # ----------------------o0 Display handling 0o----------------------
-    # Using SSD1306 OLED display with I2C on GPIO8(SDA)/GPIO9(SCL)
-    # Large fonts from ssd1306py (8x8, 16x16, 24x24, 32x32)
-    
-    if OLED_AVAILABLE and display is not None:
-        if menu == 10 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency):
-            # Display update for menu 10 - Main frequency display
-            display.clear()
-            display.text(f"V:{volume:2d} S:{squelch:2d}", 0, 0, 8)
-            freq_str = f"{ActiveFrequency[0]}.{ActiveFrequency[1]}"
-            #display.text(freq_str, 0, 20, 16)
-            display.text("ABCD", 0, 20, 16)
-            display.show()
-        elif menu == 20 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or mhz_sp_old != mhz_sp):
-            # Display update for menu 20 - MHz selection
-            display.clear()
-            display.text(f"MHz SELECT", 0, 0, 8)
-            mhz_str = str(mhz_sp).zfill(3)
-            draw_large_text(display, mhz_str, 12, 20, scale=2)
-            display.show()
-        elif menu == 30 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or tmp_pointer_old != tmp_pointer):
-            # Display update for menu 30 - kHz coarse selection (x10)
-            display.clear()
-            display.text(f"kHz SELECT (x10)", 0, 0, 8)
-            khz_str = DecArray[tmp_pointer][1:3]
-            draw_large_text(display, khz_str, 12, 20, scale=2)
-            display.text(f"xx MHz:{mhz_sp}", 0, 48, 8)
-            display.show()
-        elif menu == 40 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or tmp_pointer_old != tmp_pointer):
-            # Display update for menu 40 - kHz fine selection (x1)
-            display.clear()
-            display.text(f"kHz SELECT (x1)", 0, 0, 8)
-            khz_str = DecArray[tmp_pointer]
-            draw_large_text(display, khz_str, 0, 20, scale=2)
-            display.show()
-
-
     # ----------------------o0 Handling of incoming medssages =o----------------------
 
     # Active Frequency Message
@@ -718,8 +725,8 @@ while True:
 
         StandbyFrequency = [str(stby_mhz), str(stby_khz)[1:]]   # Storing standby frequency
 
-        mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
-        channel_sp = stby_channel                # Set kHz setpoint to current kHz
+        stby_mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
+        stby_channel_sp = stby_channel                # Set kHz setpoint to current kHz
 
         print("Active frequency: " + str(ActiveFrequency[0]) + str(ActiveFrequency[1]))    # Showing them is someone is interested
         print("Standby frequency: " + str(StandbyFrequency[0]) + str(StandbyFrequency[1]))
@@ -839,33 +846,105 @@ while True:
                 array_pointer = 0
 
 
-    """elif array[0] == b'\x02' and array[1] != b'':
-        for i in range(0, len(ByteArray)):
-            if ByteArray[i] == array[1][0]:  # Compare the first byte value directly
-                print(MsgArray[i])
-                array = [''] * 30
-                array_pointer = 0
+                """elif array[0] == b'\x02' and array[1] != b'':
+                    for i in range(0, len(ByteArray)):
+                        if ByteArray[i] == array[1][0]:  # Compare the first byte value directly
+                            print(MsgArray[i])
+                            array = [''] * 30
+                            array_pointer = 0
 
-    # 
-    elif array[0] == b'\x02' and array[1] != b'':
-        for i in range(0, len(ByteArray), 1):
-            #if ByteArray[i] == array[1]:  # Now comparing strings
-            print("x: " + chr(ByteArray[i]))
-            print("y: " + array[1].decode())
+                # 
+                elif array[0] == b'\x02' and array[1] != b'':
+                    for i in range(0, len(ByteArray), 1):
+                        #if ByteArray[i] == array[1]:  # Now comparing strings
+                        print("x: " + chr(ByteArray[i]))
+                        print("y: " + array[1].decode())
+                       
+                        if chr(ByteArray[i]) == array[1].decode():  # Now comparing strings
+                            print(MsgArray[i])
+                            array = [''] * 30
+                            array_pointer = 0
+
+                # Mic Gain Copilot Settings Message
+                elif array[0] == b'\x02' and array[1] == b'\x38':
+                    print("08.33 kHz")
+                    #print(f"Array contents: {array}")
+
+                    array = [''] * 30
+                    array_pointer = 0"""
+
+    # ----------------------o0 Display handling 0o----------------------
+    # Using SSD1306 OLED display with I2C on GPIO8(SDA)/GPIO9(SCL)
+    # Large fonts from ssd1306py (8x8, 16x16, 24x24, 32x32)
+    
+    if OLED_AVAILABLE and display is not None:
+        if menu == 10 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency0_old != ActiveFrequency[0] or ActiveFrequency1_old != ActiveFrequency[1] or StandbyFrequency0_old != StandbyFrequency[0] or StandbyFrequency1_old != StandbyFrequency[1]):
+            # Display update for menu 10 - Main frequency display
+            display.clear()
+            
+            display.text(f"V:{volume:2d} S:{squelch:2d} M:{menu}", 0, 0, 8)
+
+            freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
+            display.text(freq_str, 0, 12, 24)
+            print("freq_str: "+ freq_str)
+            
+            stby_freq_str = f"{StandbyFrequency[0]}{StandbyFrequency[1]}"
+            display.text(stby_freq_str, 0, 40, 24)
+
+            print("menu = " + str(menu) + ", stby_freq_str: "+ stby_freq_str)
+                
+            display.show()
+            
+        elif menu == 20 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency0_old != ActiveFrequency[0] or ActiveFrequency1_old != ActiveFrequency[1] or StandbyFrequency0_old != StandbyFrequency[0] or stby_mhz_sp_old != stby_mhz_sp):
+            # Display update for menu 20 - MHz selection
+            display.clear()
+            
+            display.text(f"V:{volume:2d} S:{squelch:2d} M:{menu}", 0, 0, 8)
+
+            freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
+            display.text(freq_str, 0, 12, 24)
+            print("freq_str: "+ freq_str)
+            
+            stby_freq_str = str(stby_mhz_sp) + ".nnn"
+            display.text(stby_freq_str, 0, 40, 24)
+            
+            print("menu = " + str(menu) + ", stby_freq_str: "+ stby_freq_str)
+
+            display.show()
+            
+        elif menu == 30 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency0_old != ActiveFrequency[0] or ActiveFrequency1_old != ActiveFrequency[1] or StandbyFrequency0_old != StandbyFrequency[0] or tmp_pointer_old != tmp_pointer):
+            # Display update for menu 30 - kHz coarse selection (x10)
+            display.clear()
+
+            display.text(f"V:{volume:2d} S:{squelch:2d} M:{menu}", 0, 0, 8)
+
+            freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
+            display.text(freq_str, 0, 12, 24)
+            print("freq_str: "+ freq_str)
+            
+            stby_freq_str = str(stby_mhz_sp) + DecArray[tmp_pointer][1:3] + "nn"
+            display.text(stby_freq_str, 0, 40, 24)
+
+            print("menu = " + str(menu) + ", stby_freq_str: "+ stby_freq_str)
            
-            if chr(ByteArray[i]) == array[1].decode():  # Now comparing strings
-                print(MsgArray[i])
-                array = [''] * 30
-                array_pointer = 0
+            display.show()
+            
+        elif menu == 40 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency0_old != ActiveFrequency[0] or ActiveFrequency1_old != ActiveFrequency[1] or StandbyFrequency0_old != StandbyFrequency[0] or tmp_pointer_old != tmp_pointer):
+            # Display update for menu 40 - kHz fine selection (x1)
+            display.clear()
 
-    # Mic Gain Copilot Settings Message
-    elif array[0] == b'\x02' and array[1] == b'\x38':
-        print("08.33 kHz")
-        #print(f"Array contents: {array}")
+            display.text(f"V:{volume:2d} S:{squelch:2d} M:{menu}", 0, 0, 8)
 
-        array = [''] * 30
-        array_pointer = 0"""
+            freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
+            display.text(freq_str, 0, 12, 24)
+            print("freq_str: "+ freq_str)
+            
+            stby_freq_str = str(stby_mhz_sp) + DecArray[tmp_pointer][1:]
+            display.text(stby_freq_str, 0, 40, 24)
+            
+            print("menu = " + str(menu) + ", stby_freq_str: "+ stby_freq_str)
 
+            display.show()
 
 
     # Flank triggering
@@ -878,15 +957,18 @@ while True:
     volume_old = volume
     squelch_old = squelch
     intercom_old = intercom 
-    mhz_sp_old = mhz_sp
-    channel_sp_old = channel_sp
+    stby_mhz_sp_old = stby_mhz_sp
+    stby_channel_sp_old = stby_channel_sp
     tmp_pointer_old = tmp_pointer
-    ActiveFrequency_old = ActiveFrequency.copy()
-    StandbyFrequency_old = StandbyFrequency.copy()
+    ActiveFrequency0_old = ActiveFrequency[0]
+    ActiveFrequency1_old = ActiveFrequency[1]
+    StandbyFrequency0_old = StandbyFrequency[0]
+    StandbyFrequency1_old = StandbyFrequency[1]
     ComEstablished_old = ComEstablished
     
     # Small delay to prevent CPU spinning
     time.sleep(0.01)
+
 
 
 

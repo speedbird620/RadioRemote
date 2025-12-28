@@ -286,6 +286,8 @@ while True:
         if char == '+':
             print("Up arrow pressed")
             volume_sp += 1                      # Increase volume setpoint
+            if volume_sp > 20:                  # Max volume reached
+                volume_sp = 20                  
             checksum = squelch + intercom       # Calculate checksum
             serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
             char = ''                           # Clear char variable
@@ -295,10 +297,12 @@ while True:
         if char == '-':
             print("Down arrow pressed")
             volume_sp -= 1                      # Decrease volume setpoint
+            if volume_sp < 1:                   # Min volume reached
+                volume_sp = 1
             checksum = squelch + intercom       # Calculate checksum
             serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
             char = ''                           # Clear char variable
-            time.sleep(0.15)                     # Short delay to allow processing
+            time.sleep(0.15)                    # Short delay to allow processing
 
         # User wants to switch active and standby frequencies
         if char == '5':
@@ -632,7 +636,7 @@ while True:
                 draw.text((0, 18), str(ActiveFrequency[0]) + str(ActiveFrequency[1]), fill="white", font=oled_font)
                 # Standby frequency with black text on white background (highlighted)
                 draw.rectangle((0, 38, 128, 60), fill="white")
-                draw.text((0, 38), str(mhz_sp) + str(DecArray[tmp_pointer])[1:3] + 'xx', fill="black", font=oled_font)
+                draw.text((0, 38), str(mhz_sp) + str(DecArray[tmp_pointer])[1:3] + 'nn', fill="black", font=oled_font)
         if menu == 40 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency_old != ActiveFrequency or StandbyFrequency_old != StandbyFrequency or tmp_pointer_old != tmp_pointer):
             with canvas(device) as draw:
                 # Display with larger TrueType font
