@@ -17,6 +17,10 @@ _Radio remote normal option, rear side_
 
 <img width="440" height="621" alt="image" src="https://github.com/user-attachments/assets/9ce83a6f-9c16-4568-8fbc-d29d17585469" />
 
+_Connector in the front seat with power, TX, RX and PTT from the radio_
+
+<img width="504" height="638" alt="image" src="https://github.com/user-attachments/assets/d6b92631-d566-48fb-be2e-9f7456ea4d5f" />
+
 ## Minimal option
 
 In case the rear instrument panel does not have a spare 57 mm slot, the minimal option can be selected. Then only the volume can be adjusted, but many times thats all you need. 
