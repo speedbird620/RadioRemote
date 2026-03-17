@@ -27,7 +27,8 @@ _Radio remote minimal option_
 
 ## Design
 
-The unit is a bespoke PCS with a Raspberry PI PICO, RS232-serial port, some buttons and an OLED screen. The main components is as below.
+The unit is a bespoke PCS with a Raspberry PI PICO, RS232-serial port, some buttons and an OLED screen. The main components is as below. The front and rear case is 3D-printed.
 
-<img width="1506" height="629" alt="image" src="https://github.com/user-attachments/assets/2eef482a-5bb8-4e83-a042-ab2b5fca1e7d" />
+<img width="995" height="428" alt="image" src="https://github.com/user-attachments/assets/6b3f016f-6b58-4fe5-8e6c-93355d487aa9" />
+
 
