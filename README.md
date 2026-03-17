@@ -37,8 +37,11 @@ The unit is a bespoke PCS with a Raspberry PI PICO, RS232-serial port, some butt
 
 <img width="529" height="982" alt="image" src="https://github.com/user-attachments/assets/b3d1f2ca-220d-4517-864d-561a6d2032b7" />
 
+<img width="304" height="311" alt="image" src="https://github.com/user-attachments/assets/e16226d2-c5b9-4d45-8a3f-ebd9f7ba784e" />
 
+<img width="297" height="320" alt="image" src="https://github.com/user-attachments/assets/b989bba3-7239-40c9-83a5-91e30d6904e1" />
 
+<img width="287" height="380" alt="image" src="https://github.com/user-attachments/assets/82df7e6e-0589-484f-b028-2d0cdd230d14" />
 
 
 
