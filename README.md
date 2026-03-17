@@ -5,6 +5,8 @@ Since almost all modern radios today is equipped with a serialport, a fairly sim
 
 The project is open source and please feel free to build on yourself or get inspired. Currently the only the software is working for KTR2. Please let me know if you want to help and develop adaptations for other radios.
 
+Once the prototype has been finalized PCB´s will be available for sale.
+
 Please note that adaptations can be made for transponders as well. 
 
 ## Normal option
