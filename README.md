@@ -17,7 +17,8 @@ _Radio remote normal option, rear side_
 
 In case the rear instrument panel does not have a spare 57 mm slot, the minimal option can be selected. Then only the volume can be adjusted, but many times thats all you need. 
 
-Radio remote minimal option
+_Radio remote minimal option_
+
 <img width="438" height="505" alt="image" src="https://github.com/user-attachments/assets/d71cc0c3-156a-4179-9cc3-36d0055cd815" />
 
 ## Design
