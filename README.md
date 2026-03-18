@@ -3,7 +3,7 @@ As an instructor in the back seat I have often experienced the radio volume eith
 
 Since almost all modern radios today is equipped with a serialport, a fairly simple DIY-remote control can be built. This is such a project.
 
-The project is open source and please feel free to build on yourself or get inspired. Currently the only the software is working for KTR2. Please let me know if you want to help and develop adaptations for other radios.
+The project is open source and please feel free to build on yourself or get inspired. Currently the software is adapted for KTR2. Please let me know if you want to help and develop adaptations for other radios.
 
 Once the prototype has been finalized PCB´s will be available for sale.
 
