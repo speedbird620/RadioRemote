@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # Rev B: vectorized letters and buttons.
-# rev C: - Implemented a splash screen at boot
+# Rev C: - Implemented a splash screen at boot
 #        - Implemented short and long press
 #        - Long press at vol-buttons changes squelch setting
 #        - Long press at mid freq-button changes switch frequency
