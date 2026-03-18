@@ -9,7 +9,7 @@
 #
 # To do (notes to myself):
 #    - Consider a hardware watchdog
-#    - Bug: pick up the correct frequency when chaneging frequency for the second time 
+#    - Bug: pick up the correct frequency when changing frequency for the second time 
 
 rev_string = "Rev c"
 
