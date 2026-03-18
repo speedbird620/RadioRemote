@@ -1,5 +1,5 @@
 # Backseat radio remote for gliders
-As an instructor in the back seat I have often experienced the radio either too high or too low. Asking the student to adjust the volume takes time from teaching. If it´s a civilian passenger you 1; need to explain which instrument in the panel is the radio, 2; remember what typ of radio it is, 3; explain to the individual which button to use, 4; tell them which way to turn the knob.
+As an instructor in the back seat I have often experienced the radio volume either too high or too low. Asking the student to adjust the volume takes time from teaching. If it´s a civilian passenger you 1; need to explain which instrument in the panel is the radio, 2; remember what typ of radio it is, 3; explain to the individual which button to use, 4; tell them which way to turn the knob.
 
 Since almost all modern radios today is equipped with a serialport, a fairly simple DIY-remote control can be built. This is such a project.
 
