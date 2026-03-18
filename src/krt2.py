@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 #
-# Rev B, vectorized letters and buttons.
+# Rev B: vectorized letters and buttons.
+# rev C: - Implemented a splash screen at boot
+#        - Implemented short and long press
+#        - Long press at vol-buttons changes squelch setting
+#        - Long press at mid freq-button changes switch frequency
+#        - Remove primary frequency when changing the secondary frequency
 #
 # To do (notes to myself):
-#    - Implement a splash screen at boot
-#    - Implement short and long press
-#    - Long press at vol-buttons will change squelch setting
-#    - Long press at mid freq-button will switch frequency
-#    - Remove primary frequency when changing the secondary frequency
 #    - Consider a hardware watchdog
+#    - Bug: pick up the correct frequency when chaneging frequency for the second time 
+
+rev_string = "Rev c"
 
 from machine import Pin
 import machine
@@ -16,6 +19,8 @@ import time
 from machine import UART, I2C, Pin
 
 # UART Serial communication on Pico
+# UART0: GPIO0=TX, GPIO1=RX
+# UART1: GPIO4=TX, GPIO5=RX (alternative)
 try:
     serialData = UART(0, baudrate=9600, timeout_char=100, tx=Pin(0), rx=Pin(1))
     print("✓ UART0 initialized (9600 baud)")
@@ -155,13 +160,17 @@ question_radio2pi = 0
 reply_pi2radio = 0
 question_pi2radio = 0
 
+short_press_ms = 220
+vol_plus_pressed_time = 0
+vol_minus_pressed_time = 0
+freq_enter_time = 0
 ComEstablished = False
 ComEstablished_old = False
 DuplexComEstablished = False
 TimeComEstablished = 0
 Step25khz = False
-menu = 10
-menu_old = 10
+menu = 0
+menu_old = -1
 vol_plus_old = False
 vol_minus_old = False
 volume = -1
@@ -365,24 +374,7 @@ def draw_vector_text(display, text, x, y, char_width=14, char_height=24):
     return offset_x
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+boot_tics = time.ticks_ms()
 
 while True:
     now = time.time()
@@ -430,6 +422,9 @@ while True:
         # Confirming that setpoints has been accepted by the radio
         if volume_sp != volume:
             volume = volume_sp
+
+        if squelch_sp != squelch:
+            squelch = squelch_sp
 
         if stby_mhz_sp != stby_mhz:
 
@@ -488,17 +483,20 @@ while True:
 
     # Radio replies with NAK in response from an earlier message from us
     elif data == b'\x15' and array_pointer == 0:
-        print(f"Bugger, radio replied Not OK")
+        print(f"*doh*, radio replied Not OK")
 
         # Reverting setpoints
         if volume_sp != volume:
             volume_sp = volume
 
+        if squelch_sp != squelch:
+            squelch_sp = squelch
+
         if stby_mhz_sp != stby_mhz:
             stby_mhz_sp = stby_mhz_sp
 
-        if stby_channel_sp != stby_khz:
-            stby_channel_sp = stby_khz  
+        if stby_channel_sp != stby_channel:
+            stby_channel_sp = stby_channel
 
         if switch_active_standby:
             switch_active_standby = False
@@ -561,50 +559,108 @@ while True:
     #    serialData.deinit()
     #    break
 
-    # User wants to increase volume
-    if vol_plus() and not vol_plus_old and volume >= 0:
-        print("Up arrow pressed")
-        volume_sp += 1                      # Increase volume setpoint
-        if volume_sp > 20:                  # Max volume reached
-            volume_sp = 20                  
-        checksum = squelch + intercom       # Calculate checksum
-        serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
-        time.sleep(0.15)                     # Short delay to allow processing
-
-    # User wants to decrease volume
-    if vol_minus() and not vol_minus_old and volume >= 0:
-        print("Down arrow pressed")
-        volume_sp -= 1                      # Decrease volume setpoint
-        if volume_sp < 1:                   # Min volume reached
-            volume_sp = 1
-        checksum = squelch + intercom       # Calculate checksum
-        serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
-        time.sleep(0.15)                    # Short delay to allow processing
-
     char = ''
+    
+    # Leave splash screen
+    if menu == 0 and ComEstablished:
+        menu = 1
 
-    # User wants to switch active and standby frequencies
-    if char == '5' and stby_mhz >= 0:
-        print("Switch is pressed")
-        serialData.write(bytes([0x02, 0x43]))  # Send volume command
-        switch_active_standby = True
-        char = ''                           # Clear char variable
-        time.sleep(0.15)                     # Short delay to allow processing
+    # Show normal screen
+    if menu == 1 and volume != -1:
+        menu = 10
+
+    # Someone is pressing volume plus
+    if not vol_plus() and vol_plus_old and vol_minus:
+        vol_plus_pressed_time = time.ticks_ms()
+        print("vol_plus_pressed_time = " + str(vol_plus_pressed_time))
+
+    if vol_plus() and not vol_plus_old:
+        print("tics = " + str(time.ticks_ms()))
+        print("time = " + str(vol_plus_pressed_time))
+        print("vol_minus time = " + str(time.ticks_ms() - vol_plus_pressed_time))
+        
+        # User wants to increase volume
+        if time.ticks_diff(time.ticks_ms(), vol_plus_pressed_time) < short_press_ms:  # Short press
+            print("Up arrow pressed")
+            volume_sp += 1                      # Increase volume setpoint
+            if volume_sp > 20:                  # Max volume reached
+                volume_sp = 20                  
+            checksum = squelch + intercom       # Calculate checksum
+            serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
+            time.sleep(0.15)                     # Short delay to allow processing
+
+        else:  # User wants to increase squelch
+            #if time.ticks_diff(time.ticks_ms(), vol_plus_pressed_time) >= short_press_ms:  # Long press
+            print("Up arrow pressed")
+            squelch_sp += 1                      # Increase volume setpoint
+            if squelch_sp > 20:                  # Max volume reached
+                squelch_sp = 20                  
+            checksum = squelch + intercom       # Calculate checksum
+            serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
+            time.sleep(0.15)                     # Short delay to allow processing
+
+    # Someone is pressing volume minus
+    if not vol_minus() and vol_minus_old and vol_plus():
+        vol_minus_pressed_time = time.ticks_ms()
+        print("vol_minus_pressed_time = " + str(vol_minus_pressed_time))
+
+    if vol_minus() and not vol_minus_old:
+        # User wants to increase volume
+        
+        print("tics = " + str(time.ticks_ms()))
+        print("time = " + str(vol_minus_pressed_time))
+        print("vol_minus time = " + str(time.ticks_ms() - vol_minus_pressed_time))
+
+        if time.ticks_diff(time.ticks_ms(), vol_minus_pressed_time) < short_press_ms:  # Short press
+            print("Short down arrow pressed")
+            volume_sp -= 1                      # Decrease volume setpoint
+            if volume_sp < 1:                   # Min volume reached
+                volume_sp = 1
+            checksum = squelch + intercom       # Calculate checksum
+            serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
+            time.sleep(0.15)                    # Short delay to allow processing
+
+        else: # User wants to increase squelch
+            #if time.ticks_diff(time.ticks_ms(), vol_minus_pressed_time) >= short_press_ms:  # Long press
+            print("Long down arrow pressed")
+            squelch_sp -= 1                      # Decrease volume setpoint
+            if squelch_sp < 1:                   # Min volume reached
+                squelch_sp = 1
+            checksum = squelch + intercom       # Calculate checksum
+            serialData.write(bytes([0x02, 0x41, volume_sp, squelch, intercom, checksum]))  # Send volume command
+            time.sleep(0.15)                    # Short delay to allow processing
+
 
     # freq_plus = Pin(4, Pin.IN, Pin.PULL_UP)
     # freq_enter = Pin(5, Pin.IN, Pin.PULL_UP)
     # freq_minus = Pin(6, Pin.IN, Pin.PULL_UP)
 
+    # Someone is pressing enter frequency menu
+    if not freq_enter() and freq_enter_old:
+        freq_enter_time = time.ticks_ms()
 
-    # User wants to enter frequency menu
     if freq_enter() and not freq_enter_old and menu == 10 and stby_mhz >= 0:
-        stby_mhz_sp = stby_mhz                        # Set MHz setpoint to current MHz
-        print("MHz SP = " + str(stby_mhz_sp))    # Showing current MHz setpoint
-        char = ''                           # Clear char variable
-        menu = 20                           # Entering the menu
+ 
+        # User wants to change frequency
+        if time.ticks_diff(time.ticks_ms(), freq_enter_time) < short_press_ms:  # Short press
+            # Enter requency menu
+            stby_mhz_sp = stby_mhz                   # Set MHz setpoint to current MHz
+            print("MHz SP = " + str(stby_mhz_sp))    # Showing current MHz setpoint
+            
+            tmp_pointer = stby_channel_sp            # Set channel setpoint to current channel
+            print("Channel sp: " + str(stby_channel_sp) + ", " + DecArray[stby_channel_sp])
+            
+            menu = 20                           # Entering the menu
+
+        else: # User wants to switch main and standby frequencies
+            #if time.ticks_diff(time.ticks_ms(), freq_enter_time) >= short_press_ms:  # Long press
+            serialData.write(bytes([0x02, 0x43]))  # Send volume command
+            switch_active_standby = True
+            time.sleep(0.15)                     # Short delay to allow processing
+
         
     # User wants to increase mHz setpoint
-    elif freq_plus() and not freq_plus_old and menu == 20:
+    elif not freq_plus() and freq_plus_old and menu == 20:
         stby_mhz_sp += 1                         # Notching up setpoint
 
         if stby_mhz_sp > 136:                    # End of airband. 
@@ -615,77 +671,71 @@ while True:
         char = ''                           # Clear char variable
     
     # User wants to decrease mHz setpoint
-    elif freq_minus() and not freq_minus_old and menu == 20:
+    elif not freq_minus() and freq_minus_old and menu == 20:
         stby_mhz_sp -= 1                         # Notching down setpoint
         if stby_mhz_sp < 118:                    # End of airband
             stby_mhz_sp = 136                    # Continuing from top
 
         print("Meny: " + str(menu))         # Showing current menu
         print("MHz SP = " + str(stby_mhz_sp))    # Showing current MHz setpoint
-        char = ''                           # Clear char variable
 
     # User wants to enter nXX kHz menu
-    elif freq_enter() and not freq_enter_old and menu == 20:
-        tmp_pointer = stby_channel          # Set kHz setpoint to current kHz
+    elif not freq_enter() and freq_enter_old and menu == 20:
+        print("A: " + str(stby_channel_sp))
+        tmp_pointer = stby_channel_sp          # Set kHz setpoint to current kHz
         print("Meny: " + str(menu))         # Showing current menu
         print("kHz SP = " + str(DecArray[tmp_pointer])[:3] + 'xx')    # Showing current kHz setpoint
         menu = 30
-        char = ''                           # Clear char variable
 
     # User wants to increase kHz setpoint
-    elif freq_plus() and not freq_plus_old and menu == 30:
+    elif not freq_plus() and freq_plus_old and menu == 30:
         print("Meny: " + str(menu))         # Showing current menu
         tmp_pointer += 16                   # Notching up setpoint
         if tmp_pointer >= len(DecArray):    # End of array
             tmp_pointer = len(DecArray) - tmp_pointer      # Continuing from start
         print("kHz SP = " + str(DecArray[tmp_pointer])[:3] + 'xx')    # Showing current kHz setpoint
-        char = ''                           # Clear char variable
     
     # User wants to decrease kHz setpoint
-    elif freq_minus() and not freq_minus_old and menu == 30:
+    elif not freq_minus() and freq_minus_old and menu == 30:
         print("Meny: " + str(menu))         # Showing current menu
         tmp_pointer -= 16                    # Notching down setpoint
         if tmp_pointer < 0:                 # End of array
             tmp_pointer = len(DecArray) + tmp_pointer - 1  # Continuing from start
         print("kHz SP = " + str(DecArray[tmp_pointer])[:3] + 'xx')    # Showing current kHz setpoint
-        char = ''                           # Clear char variable
 
     # User wants to enter Xnn kHz menu
-    elif freq_enter() and not freq_enter_old and menu == 30:
+    elif not freq_enter() and freq_enter_old and menu == 30:
         menu = 40
         print("Meny: " + str(menu))         # Showing current menu
         print("kHz SP = " + str(DecArray[tmp_pointer]))    # Showing current kHz setpoint
-        char = ''                           # Clear char variable
 
     # User wants to increase kHz setpoint
-    elif freq_plus() and not freq_plus_old and menu == 40:
+    elif not freq_plus() and freq_plus_old and menu == 40:
         print("Meny: " + str(menu))         # Showing current menu
         tmp_pointer += 1                    # Notching up setpoint
         if tmp_pointer >= len(DecArray):    # End of array
             tmp_pointer = 0                 # Continuing from start
         print("kHz SP = " + str(DecArray[tmp_pointer]))    # Showing current kHz setpoint
-        char = ''                           # Clear char variable
     
     # User wants to decrease kHz setpoint
-    elif freq_minus() and not freq_minus_old and menu == 40:
+    elif not freq_minus() and freq_minus_old and menu == 40:
         print("Meny: " + str(menu))         # Showing current menu
         tmp_pointer -= 1                    # Notching down setpoint
         if tmp_pointer < 0:                 # End of array
             tmp_pointer = len(DecArray)-1   # Continuing from end
         print("kHz SP = " + str(DecArray[tmp_pointer]))    # Showing current kHz setpoint
-        char = ''                           # Clear char variable
 
     # User wants to set frequency
-    elif freq_enter() and not freq_enter_old and menu == 40:
+    elif not freq_enter() and freq_enter_old and menu == 40:
         print("Meny: " + str(menu))             # Showing current menu
         stby_channel_sp = (HexArray[tmp_pointer])    # Setting channel setpoint
         checksum = int(stby_mhz_sp) ^ stby_channel_sp     # Calculate checksum4
         khz_sp = str(DecArray[tmp_pointer])[1:]            # Setting kHz setpoint
+        print("Channel SP: " + str(stby_channel_sp) + ", tmp_pointer: " + str(tmp_pointer))
         print("Sending to radio: " + str(stby_mhz_sp) + str(DecArray[tmp_pointer])[1:])  # Showing frequency being sent
 
         serialData.write(bytes([0x02, 0x52, int(stby_mhz_sp), stby_channel_sp, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, checksum]))  # Send volume command
         menu = 10                           # Exiting menu
-        char = ''                           # Clear char variable
         time.sleep(0.15)                     # Short delay to allow processing
 
     elif char == 'A' and menu == 10:     # Replace with actual condition to activate dual mode
@@ -932,6 +982,28 @@ while True:
     # OPTIMIZED: Using vector/line-drawn font for fast rendering
     
     if OLED_AVAILABLE and display is not None:
+        
+        if menu == 0 and (menu_old != menu):
+            # Display update for menu 10 - Main frequency display
+            display.clear()
+            
+            display.text(f"Radio remote", 0, 0, 8)
+            display.text(rev_string, 0, 16, 8)
+            display.text(f"Awaiting radio", 0, 26, 8)
+            display.text(f"PLS STBY", 0, 46, 8)
+            
+            print("menu = Boot")
+                
+            display.show()
+
+        if menu == 1 and (menu_old != menu):
+            # Display update for menu 10 - Main frequency display
+            display.clear()
+            
+            display.text("     DISCO!", 0, 24, 8)
+                
+            display.show()
+
         if menu == 10 and (menu_old != menu or volume_old != volume or squelch_old != squelch or ActiveFrequency0_old != ActiveFrequency[0] or ActiveFrequency1_old != ActiveFrequency[1] or StandbyFrequency0_old != StandbyFrequency[0] or StandbyFrequency1_old != StandbyFrequency[1]):
             # Display update for menu 10 - Main frequency display
             display.clear()
@@ -955,9 +1027,9 @@ while True:
             
             display.text(f"V:{volume:2d} S:{squelch:2d} M:{menu}", 0, 0, 8)
 
-            freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
-            draw_vector_text(display, freq_str, 0, 16)  # Fast vector font - line 2
-            print("freq_str: "+ freq_str)
+            #freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
+            #draw_vector_text(display, freq_str, 0, 16)  # Fast vector font - line 2
+            #print("freq_str: "+ freq_str)
             
             stby_freq_str = str(stby_mhz_sp) + ".nnn"
             draw_vector_text(display, stby_freq_str, 0, 43)  # Fast vector font - line 3
@@ -972,9 +1044,9 @@ while True:
 
             display.text(f"V:{volume:2d} S:{squelch:2d} M:{menu}", 0, 0, 8)
 
-            freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
-            draw_vector_text(display, freq_str, 0, 16)  # Fast vector font - line 2
-            print("freq_str: "+ freq_str)
+            #freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
+            #draw_vector_text(display, freq_str, 0, 16)  # Fast vector font - line 2
+            #print("freq_str: "+ freq_str)
             
             stby_freq_str = str(stby_mhz_sp) + DecArray[tmp_pointer][1:3] + "nn"
             draw_vector_text(display, stby_freq_str, 0, 43)  # Fast vector font - line 3
@@ -989,9 +1061,9 @@ while True:
 
             display.text(f"V:{volume:2d} S:{squelch:2d} M:{menu}", 0, 0, 8)
 
-            freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
-            draw_vector_text(display, freq_str, 0, 16)  # Fast vector font - line 2
-            print("freq_str: "+ freq_str)
+            #freq_str = f"{ActiveFrequency[0]}{ActiveFrequency[1]}"
+            #draw_vector_text(display, freq_str, 0, 16)  # Fast vector font - line 2
+            #print("freq_str: "+ freq_str)
             
             stby_freq_str = str(stby_mhz_sp) + DecArray[tmp_pointer][1:]
             draw_vector_text(display, stby_freq_str, 0, 43)  # Fast vector font - line 3
